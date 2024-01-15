@@ -3,10 +3,8 @@ server:
 
 spring:
   profiles:
-    active: pd
-
-  application:
-    name: posting-service
+#    active: local
+    active: ${PROFILE}
 
   datasource:
     driver-class-name: org.postgresql.Driver
@@ -22,8 +20,3 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         show_sql: true
     open-in-view: false
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://52.78.12.178:8761/eureka/

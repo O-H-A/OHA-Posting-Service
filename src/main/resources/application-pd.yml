@@ -1,5 +1,13 @@
 spring:
+  application:
+    name: posting-service
+
   jpa:
     properties:
       hibernate:
         default_schema: public
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://52.78.12.178:8761/eureka/
