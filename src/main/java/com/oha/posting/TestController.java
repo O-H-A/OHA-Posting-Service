@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 public class TestController {
 
-    @Operation(summary = "문자열 입력", description = "입력한 문자열이 반환됩니다.")
+    @Operation(summary = "문자열 입력", description = "입력한 문자열이 반환됩니다..")
     @Parameter(name = "str", description = "문자열")
     @GetMapping("/api/posting/test")
     public String test(@RequestParam String str) {
