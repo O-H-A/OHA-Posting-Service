@@ -1,6 +1,6 @@
 spring:
   application:
-    name: posting-service-local
+    name: posting-service-dev
 
   jpa:
     properties:
