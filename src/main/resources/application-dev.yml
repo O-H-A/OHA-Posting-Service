@@ -10,7 +10,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://52.79.158.1:8761/eureka/
+      defaultZone: ${EUREKA_URL}
 
   instance:
     hostname: ${HOSTNAME}
