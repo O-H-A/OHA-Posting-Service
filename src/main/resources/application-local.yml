@@ -6,6 +6,7 @@ spring:
     properties:
       hibernate:
         default_schema: dev
+        ddl-auto: create
 
 eureka:
   client:
