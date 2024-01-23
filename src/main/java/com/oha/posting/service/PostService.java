@@ -40,9 +40,9 @@ public class PostService {
     private final FileConfig fileConfig;
 
     @Value("${file.base-url}")
-    private String FILE_BASE__URL;
+    private String FILE_BASE_URL;
 
-    @Value("$file.save-path")
+    @Value("${file.save-path}")
     private String SAVE_PATH;
 
     @Transactional(readOnly = true)
@@ -56,7 +56,7 @@ public class PostService {
             PostSearchResponse data = PostSearchResponse.toDto(post);
             List<String> urls = new ArrayList<>();
             for(PostFile file : post.getFiles()) {
-                urls.add(FILE_BASE__URL+file.getUrl());
+                urls.add(FILE_BASE_URL+file.getUrl());
             }
             data.setUrls(urls);
 
