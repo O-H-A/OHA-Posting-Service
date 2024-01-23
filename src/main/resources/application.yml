@@ -25,7 +25,10 @@ springdoc:
   swagger-ui:
     path: /api/posting/swagger-ui
   api-docs:
-    path: /api/posting/api-docs
+    path: /api/posting/swagger-ui/api-docs
 
 swagger:
   server: ${GATEWAY_URL}
+
+api:
+  url: ${GATEWAY_URL}

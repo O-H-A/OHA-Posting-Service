@@ -6,7 +6,7 @@ spring:
     properties:
       hibernate:
         default_schema: dev
-        ddl-auto: create
+        hbm2ddl.auto: update
 
 eureka:
   client:
@@ -15,3 +15,9 @@ eureka:
 
   instance:
     hostname: localhost
+
+swagger:
+  server: http://localhost:8000
+
+file:
+  base-url: http://localhost
