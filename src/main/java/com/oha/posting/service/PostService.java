@@ -40,7 +40,10 @@ public class PostService {
     private final FileConfig fileConfig;
 
     @Value("${file.base-url}")
-    private String BASE_FILE_URL;
+    private String FILE_BASE__URL;
+
+    @Value("$file.save-path")
+    private String SAVE_PATH;
 
     @Transactional(readOnly = true)
     public ResponseObject<PostSearchResponse> getPost(String token, Long postId) {
@@ -53,7 +56,7 @@ public class PostService {
             PostSearchResponse data = PostSearchResponse.toDto(post);
             List<String> urls = new ArrayList<>();
             for(PostFile file : post.getFiles()) {
-                urls.add(BASE_FILE_URL+file.getUrl());
+                urls.add(FILE_BASE__URL+file.getUrl());
             }
             data.setUrls(urls);
 
@@ -128,16 +131,15 @@ public class PostService {
                 }
 
                 String extension = fileConfig.getFileExtension(file.getOriginalFilename());
-                String savePath = "C:/upload/post/";
                 String url = "/images/post/";
 
                 // 파일 db 저장
                 String uuidFileName = UUID.randomUUID() + "." +extension;
-                PostFile postFile = new PostFile(post, savePath + uuidFileName, url+uuidFileName);
+                PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + uuidFileName, url+uuidFileName);
                 fileList.add(postFile);
 
                 // 파일 저장
-                file.transferTo(new File(savePath + uuidFileName));
+                file.transferTo(new File(SAVE_PATH + "post/" + uuidFileName));
             }
             post.setFiles(fileList);
 

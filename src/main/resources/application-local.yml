@@ -21,3 +21,4 @@ swagger:
 
 file:
   base-url: http://localhost
+  save-path: C:/upload/
