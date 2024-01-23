@@ -1,4 +1,4 @@
-package com.oha.posting.config;
+package com.oha.posting.config.exception;
 
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.config.response.StatusCode;
@@ -23,9 +23,7 @@ public class GlobalExceptionHandler {
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .toList();
 
-        ResponseObject<?> response = new ResponseObject<>();
-        response.setStatusCode(StatusCode.BAD_REQUEST);
-        response.setMessage("Validation failed: " + String.join(", ", errorMessages));
-        return response;
+        String message = "Validation failed: " + String.join(", ", errorMessages);
+        return new ResponseObject<>(StatusCode.BAD_REQUEST, message);
     }
 }
