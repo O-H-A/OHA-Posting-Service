@@ -34,5 +34,5 @@ api:
   url: ${GATEWAY_URL}
 
 file:
-  base-url: ${HOSTNAME}
+  base-url: ${FILE_SERVER}
   save-path: /home/upload/
