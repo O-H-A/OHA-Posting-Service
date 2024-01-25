@@ -25,8 +25,8 @@ public class Post {
     @JoinColumn(name = "category_code")
     private CommonCode category;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Keyword> keywords;
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Keyword> keywords = new ArrayList<>();
 
     private String content;
 

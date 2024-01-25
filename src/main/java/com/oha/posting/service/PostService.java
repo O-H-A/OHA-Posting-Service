@@ -194,12 +194,9 @@ public class PostService {
                         post.setCategory(commonCode);
                         break;
                     case "keywords":
-                        keywordRepository.deleteAll(post.getKeywords());
-                        if (dto.getKeywords() == null || dto.getKeywords().isEmpty()) {
-                            post.setKeywords(null); // 빈 리스트 저장하면 삭제 안 된다
-                        } else {
-                            List<Keyword> keywords = (dto.getKeywords()).stream().map(keywordName -> new Keyword(post, keywordName)).toList();
-                            post.setKeywords(keywords);
+                        post.getKeywords().clear();
+                        if(dto.getKeywords() != null) {
+                            (dto.getKeywords()).forEach(keywordName -> post.getKeywords().add(new Keyword(post, keywordName)));
                         }
                         break;
                     case "hcode":
