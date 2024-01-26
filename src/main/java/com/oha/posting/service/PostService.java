@@ -275,7 +275,7 @@ public class PostService {
                     throw new InvalidDataException(StatusCode.BAD_REQUEST, "이미 좋아요 상태입니다.");
                 }
                 // 좋아요 등록
-                likeRepository.save(new Like(likeId, post));
+                post.getLikes().add(new Like(new LikeId(dto.getPostId(), userId), post));
                 response.setResponse(StatusCode.CREATED, "Success");
             } else {
                 if (existingLike.isEmpty()) {
