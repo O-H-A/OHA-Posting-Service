@@ -278,7 +278,7 @@ public class PostService {
             //            if (!"200".equals((String)responseBody.get("statusCode"))) {
                         // throw new DatabaseUpdateException(StatusCode.BAD_REQUEST,"위치가 존재하지 않습니다.");
             //            }
-                        // post.setHcode( Long.parseLong((String)responseBody.get("hcode")));
+                        post.setHcode(dto.getHcode());
                         break;
                     case "locationDetail":
                         post.setLocationDetail(dto.getLocationDetail());
@@ -288,6 +288,7 @@ public class PostService {
                 }
             }
 
+            post.setUpdDtm(new Timestamp(System.currentTimeMillis()));
             response.setResponse(StatusCode.OK, "Success");
         }
         catch (InvalidDataException e) {
