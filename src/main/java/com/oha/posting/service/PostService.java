@@ -15,6 +15,8 @@ import com.oha.posting.repository.CommonCodeRepository;
 import com.oha.posting.repository.KeywordRepository;
 import com.oha.posting.repository.LikeRepository;
 import com.oha.posting.repository.PostRepository;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -80,8 +83,77 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<PostSearchResponse>> getPostList(Boolean likeOrder, Long hcode) {
+    public ResponseObject<List<PostSearchResponse>> getPostList(Long hcode, Boolean popular, String categoryCode, Integer offset, Integer size) {
         ResponseObject<List<PostSearchResponse>> response = new ResponseObject<>();
+        List<PostSearchResponse> dataList = new ArrayList<>();
+        try{
+            // Map<String, Object> params = new HashMap<>();
+            // params.put("hcode", hcode);
+            // Map<String, Object> responseBody = externalApiService.get(token, "/api/common/weather", params);
+            // data >> 위치 정보 set
+            QPost qPost = QPost.post;
+
+            // where
+            BooleanBuilder builder = new BooleanBuilder();
+            builder.and(qPost.hcode.eq(hcode)); // 위치 (필수)
+            if(categoryCode != null) { // 카테고리
+                builder.and(qPost.category.code.eq(categoryCode));
+            }
+            // order by
+            List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+            if (popular != null && popular) { // 인기순
+                orderSpecifiers.add(qPost.likes.size().desc());
+            }
+            orderSpecifiers.add(qPost.regDtm.desc()); // 최신순
+
+            List<Post> postList = postRepository.searchPostList(builder, orderSpecifiers, offset, size);
+
+            if(postList.isEmpty()) {
+                response.setResponse(StatusCode.NOT_FOUND, "게시글이 없습니다.");
+            }
+            else {
+                List<Long> userIds = new ArrayList<>();
+                for(Post post: postList) {
+                    userIds.add(post.getUserId());
+                }
+
+//              user 리스트 조회
+//                Map<String, Object> params = new HashMap<>();
+//                params.put("userIds", userIds);
+//                Map<String, Object> responseBody = externalApiService.get(token, "/api/users", params);
+//                if (!"200".equals((String)responseBody.get("statusCode"))) {
+//                      throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
+//                }
+
+                for(Post post: postList) {
+                    PostSearchResponse data = PostSearchResponse.toDto(post);
+
+                    List<String> urls = new ArrayList<>();
+                    for(PostFile file : post.getFiles()) {
+                        urls.add(FILE_BASE_URL+file.getUrl());
+                    }
+                    data.setUrls(urls);
+
+                    // user 정보 매핑
+                    // 위치 정보 매핑
+
+                    dataList.add(data);
+                }
+
+                response.setResponse(StatusCode.OK, "Success", dataList);
+            }
+
+
+        }
+        catch (InvalidDataException e) {
+            log.warn("Exception during post search", e);
+            response.setResponse(e.getStatusCode(), e.getMessage());
+        }
+        catch (Exception e) {
+            log.warn("Exception during post search", e);
+            response.setResponse(StatusCode.SERVER_ERROR, "조회에 실패하였습니다");
+        }
+
 
         return response;
     }

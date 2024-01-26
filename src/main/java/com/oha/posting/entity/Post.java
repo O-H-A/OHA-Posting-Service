@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -46,6 +47,7 @@ public class Post {
         post.setHcode(dto.getHcode());
         post.setContent(dto.getContent());
         post.setRegDtm(new Timestamp(System.currentTimeMillis()));
+        post.setLocationDetail(dto.getLocationDetail());
         return post;
     }
 }

@@ -10,6 +10,8 @@ import com.oha.posting.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
@@ -43,11 +45,16 @@ public class PostController {
                                                           **statusCode:**
                                                           - 200: 성공
                                                           - 404: 게시글 없음
-                                                          - 500: 서버 오류
+                                                          - 500: 서버 오류\n
+                                                          **`offset: 결과 집합 시작 위치(0부터 시작), 기본값 0`**\n
+                                                          **`size: 반환할 행 최대 수, 기본값 10(최대 100)`**
                                                           """)
-    public ResponseObject<List<PostSearchResponse>> getPostList(@RequestParam(name = "likeOrder", required = false) Boolean likeOrder
-                                                              , @RequestParam(name = "hcode") Long hcode) {
-        return postService.getPostList(likeOrder, hcode);
+    public ResponseObject<List<PostSearchResponse>> getPostList(@RequestParam(name = "hcode") Long hcode
+                                                              , @RequestParam(name = "likeOrder", required = false) Boolean popular
+                                                              , @RequestParam(name = "categoryCode", required = false) String categoryCode
+                                                              , @RequestParam(name = "offset", defaultValue = "0") Integer offset
+                                                              , @RequestParam(name = "size", defaultValue = "10") @Max(100) Integer size) {
+        return postService.getPostList(hcode, popular, categoryCode, offset, size);
     }
 
     @PostMapping(value = "/post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -61,7 +68,7 @@ public class PostController {
                                                     - hcode
                                                     """)
     public ResponseObject<PostInsertResponse> insertPost(@RequestPart(name = "dto") @Validated PostInsertRequest dto
-                                                       , @RequestPart(name = "files") List<MultipartFile> files
+                                                       , @RequestPart(name = "files") @Size(max = 1, message = "파일은 1개까지 가능합니다.") List<MultipartFile> files
                                                        , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
                                                        , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) {
         return postService.insertPost(dto, files, token, userId);
@@ -78,7 +85,7 @@ public class PostController {
                                                     **`keywords 수정하는 경우 전체 삭제/등록 로직이고, keywords가 null이거나 빈 리스트면 삭제만 됩니다.`**\n
                                                     """)
     public ResponseObject<?> updatePost(@RequestPart(name = "dto") @Validated PostUpdateRequest dto
-                                      , @RequestPart(name = "files", required = false) List<MultipartFile> files
+                                      , @RequestPart(name = "files", required = false) @Size(max = 1, message = "파일은 1개까지 가능합니다.") List<MultipartFile> files
                                       , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
                                       , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) {
         return postService.updatePost(dto, files, token, userId);

@@ -1,19 +1,24 @@
 package com.oha.posting.object.response;
 
-import com.oha.posting.entity.Keyword;
-import com.oha.posting.entity.Like;
-import com.oha.posting.entity.LikeId;
-import com.oha.posting.entity.Post;
+import com.oha.posting.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class PostSearchResponse {
 
     private Long postId;
+
+    private Long userId;
+
+    private String userNickname;
 
     private List<Long> likeUsers;
 
@@ -25,6 +30,9 @@ public class PostSearchResponse {
 
     @Schema(example = "오하늘")
     private String content;
+
+    @Schema(example = "1111065000")
+    private Long hcode;
 
     @Schema(example = "37.58398889")
     private Double latitude;
@@ -44,12 +52,13 @@ public class PostSearchResponse {
     @Schema(example = "2024-01-18T10:28:47.245Z")
     private Timestamp updDtm;
 
-    @Schema(example = "/images/post/adjawdalkjdasd.jpg")
+    @Schema(example = "[http://localhost/images/post/adjawdalkjdasd.jpg]")
     private List<String> urls;
 
     public static PostSearchResponse toDto(Post post) {
         PostSearchResponse response = new PostSearchResponse();
         response.postId = post.getPostId();
+        response.userId = post.getUserId();
         response.likeUsers = (post.getLikes()).stream().map(Like::getLikeId).map(LikeId::getUserId).toList();
         response.likeCount = response.getLikeUsers().size();
         response.categoryCode = post.getCategory().getCode();
@@ -58,6 +67,7 @@ public class PostSearchResponse {
         response.locationDetail = post.getLocationDetail();
         response.regDtm = post.getRegDtm();
         response.updDtm = post.getUpdDtm();
+        response.hcode = post.getHcode();
         return response;
     }
 }
