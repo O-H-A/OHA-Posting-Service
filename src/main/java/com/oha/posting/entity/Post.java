@@ -42,6 +42,9 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PostFile> files;
 
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Report> reports;
+
     public static Post toEntity(PostInsertRequest dto) {
         Post post = new Post();
         post.setHcode(dto.getHcode());

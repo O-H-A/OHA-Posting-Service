@@ -8,6 +8,7 @@ import com.oha.posting.config.response.StatusCode;
 import com.oha.posting.entity.*;
 import com.oha.posting.object.request.PostInsertRequest;
 import com.oha.posting.object.request.PostLikeRequest;
+import com.oha.posting.object.request.PostReportRequest;
 import com.oha.posting.object.request.PostUpdateRequest;
 import com.oha.posting.object.response.PostInsertResponse;
 import com.oha.posting.object.response.PostSearchResponse;
@@ -255,7 +256,7 @@ public class PostService {
             }
 
             for(String item : dto.getUpdateItem().split(",")) {
-                switch (item) {
+                switch (item.trim()) {
                     case "content":
                         post.setContent(dto.getContent());
                         break;
@@ -364,6 +365,37 @@ public class PostService {
         } catch (Exception e) {
             log.warn("Exception during post like", e);
             response.setResponse(StatusCode.SERVER_ERROR, "좋아요에 실패하였습니다");
+        }
+
+        return response;
+    }
+
+    @Transactional
+    public ResponseObject<?> reportPost(Long userId, PostReportRequest dto) {
+        ResponseObject<?> response = new ResponseObject<>();
+
+        try {
+            Post post = postRepository.findById(dto.getPostId())
+                    .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
+
+            if(userId.equals(post.getUserId())) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST, "본인이 작성한 글은 신고하실 수 없습니다.");
+            }
+//            중복 신고 막기
+//            for (Report report : post.getReports()) {
+//                if(userId.equals(report.getUserId())) {
+//                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "신고 내역이 있습니다.");
+//                }
+//            }
+            Report newReport = new Report(userId, dto.getContent(), post);
+            post.getReports().add(newReport);
+            response.setResponse(StatusCode.CREATED, "Success");
+        } catch (InvalidDataException e) {
+            log.warn("Exception during post report", e);
+            response.setResponse(e.getStatusCode(), e.getMessage());
+        } catch (Exception e) {
+            log.warn("Exception during post report", e);
+            response.setResponse(StatusCode.SERVER_ERROR, "신고에 실패하였습니다");
         }
 
         return response;

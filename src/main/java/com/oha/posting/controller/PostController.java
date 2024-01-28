@@ -3,6 +3,7 @@ package com.oha.posting.controller;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.object.request.PostInsertRequest;
 import com.oha.posting.object.request.PostLikeRequest;
+import com.oha.posting.object.request.PostReportRequest;
 import com.oha.posting.object.request.PostUpdateRequest;
 import com.oha.posting.object.response.PostInsertResponse;
 import com.oha.posting.object.response.PostSearchResponse;
@@ -32,6 +33,7 @@ public class PostController {
     @Operation(summary = "게시글 단건 조회", description = """
                                                         **statusCode:**
                                                         - 200: 성공
+                                                        - 400: 데이터 오류
                                                         - 404: 게시글 없음
                                                         - 500: 서버 오류
                                                         """)
@@ -44,6 +46,7 @@ public class PostController {
     @Operation(summary = "게시글 리스트 조회", description = """
                                                           **statusCode:**
                                                           - 200: 성공
+                                                          - 400: 데이터 오류
                                                           - 404: 게시글 없음
                                                           - 500: 서버 오류\n
                                                           **`offset: 결과 집합 시작 위치(0부터 시작), 기본값 0`**\n
@@ -61,6 +64,7 @@ public class PostController {
     @Operation(summary = "게시글 작성", description = """ 
                                                     **Status Code:**
                                                     - `201`: 성공
+                                                    - 400: 데이터 오류
                                                     - 404: 게시글 없음
                                                     - 500: 서버 오류\n
                                                     **필수 값:**
@@ -78,6 +82,7 @@ public class PostController {
     @Operation(summary = "게시글 수정", description = """
                                                     **statusCode:**
                                                     - 200: 성공
+                                                    - 400: 데이터 오류
                                                     - 403: 권한
                                                     - 404: 게시글 없음
                                                     - 500: 서버 오류\n
@@ -95,6 +100,7 @@ public class PostController {
     @Operation(summary = "게시글 삭제", description = """
                                                     **statusCode:**
                                                     - 200: 성공
+                                                    - 400: 데이터 오류
                                                     - 403: 권한
                                                     - 404: 게시글 없음
                                                     - 500: 서버 오류
@@ -105,11 +111,12 @@ public class PostController {
     }
 
     @PostMapping("/post/like")
-    @Operation(summary = "좋아요", description = """
-                                                "**statusCode:**
-                                                - 201: 성공(좋아요 취소)
-                                                - 201: 성공(좋아요)
-                                                - 404: 좋아요 없음
+    @Operation(summary = "게시글 좋아요", description = """
+                                                **statusCode:**
+                                                - 200: 성공(좋아요 취소)
+                                                - `201`: 성공(좋아요)
+                                                - 400: 데이터 오류
+                                                - 404: 게시글 없음
                                                 - 500: 서버 오류\n
                                                 **`type: L(Like) 또는 U(Unlike) 중 한 글자만 입력해주세요`**
                                                 """)
@@ -117,4 +124,18 @@ public class PostController {
                                 , @RequestBody @Validated PostLikeRequest dto) {
         return postService.like(userId, dto);
     }
+
+    @PostMapping("/post/report")
+    @Operation(summary = "게시글 신고하기", description = """
+                                                **statusCode:**
+                                                - `201`: 성공
+                                                - 400: 데이터 오류
+                                                - 404: 게시글 없음
+                                                - 500: 서버 오류
+                                                """)
+    public ResponseObject<?> reportPost(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
+                                      , @RequestBody @Validated PostReportRequest dto) {
+        return postService.reportPost(userId, dto);
+    }
+
 }
