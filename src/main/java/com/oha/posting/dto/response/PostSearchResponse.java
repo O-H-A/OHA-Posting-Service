@@ -1,4 +1,4 @@
-package com.oha.posting.object.response;
+package com.oha.posting.dto.response;
 
 import com.oha.posting.entity.*;
 import io.swagger.v3.oas.annotations.media.Schema;
