@@ -12,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -22,6 +23,10 @@ public class ExternalApiService {
 
     @Value("${api.url}")
     private String baseUrl;
+
+    public Map<String, Object> get(String token, String uri) throws IOException {
+        return get(token, uri, new HashMap<>());
+    }
 
     public Map<String, Object> get(String token, String uri, Map<String, Object> params) throws IOException {
         HttpHeaders headers = new HttpHeaders();
