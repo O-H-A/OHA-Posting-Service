@@ -35,22 +35,22 @@ public class PostSearchResponse {
 
     private List<String> keywords;
 
-    @Schema(example = "오하늘")
+    @Schema(example = "별밤투어")
     private String content;
 
-    @Schema(example = "1111065000")
+    @Schema(example = "4215032000")
     private Long regionCode;
 
-    @Schema(example = "서울")
+    @Schema(example = "강원도")
     private String firstAddress;
 
-    @Schema(example = "성북구")
+    @Schema(example = "강릉시")
     private String secondAddress;
 
-    @Schema(example = "하월곡동")
+    @Schema(example = "왕산면")
     private String thirdAddress;
 
-    @Schema(example = "영종도 다리")
+    @Schema(example = "안반데기")
     private String locationDetail;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
@@ -83,6 +83,7 @@ public class PostSearchResponse {
         return response;
     }
 
+    @Schema(hidden = true)
     public void setLocationInfo(ExternalLocation location) {
         this.firstAddress = location.getFirstAddress();
         this.secondAddress = location.getSecondAddress();
