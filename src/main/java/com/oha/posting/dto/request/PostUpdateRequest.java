@@ -29,13 +29,13 @@ public class PostUpdateRequest {
 
     @Schema(description = "행정구역코드", example = "1111065000")
     @NotNull(message = "위치를 선택해주세요.")
-    private Long hcode;
+    private Long regionCode;
 
     @Schema(description = "위치 추가 정보", example = "영종도 다리")
     @Size(max = 50, message = "위치 상세 정보는 50자 이하로 입력해주세요")
     private String locationDetail;
 
-    @Schema(description = "수정 항목", example = "content,keywords,hcode")
+    @Schema(description = "수정 항목", example = "content,keywords,regionCode")
     @NotBlank
     private String updateItem;
 

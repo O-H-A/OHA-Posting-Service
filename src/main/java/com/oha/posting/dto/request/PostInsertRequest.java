@@ -25,7 +25,7 @@ public class PostInsertRequest {
 
     @Schema(description = "행정구역코드", example = "4215032000")
     @NotNull(message = "위치를 선택해주세요.")
-    private Long hcode;
+    private Long regionCode;
 
     @Schema(description = "위치 추가 정보", example = "안반데기")
     @Size(max = 50, message = "위치 상세 정보는 50자 이하로 입력해주세요")

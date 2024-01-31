@@ -29,8 +29,8 @@ public class WeatherController {
                                                      - 200: 성공
                                                      - 500: 서버 오류
                                                      """)
-    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(@RequestParam(name = "hcode") Long hcode) {
-        return weatherService.getWeatherCount(hcode);
+    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(@RequestParam(name = "regionCode") Long regionCode) {
+        return weatherService.getWeatherCount(regionCode);
     }
 
     @PostMapping("/weather")

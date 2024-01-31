@@ -20,6 +20,7 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -28,14 +29,15 @@ public class WeatherService {
 
     private final WeatherRepository weatherRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final ExternalApiService externalApiService;
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(Long hcode) {
+    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(Long regionCode) {
         ResponseObject<List<WeatherCountSearchResponse>> response = new ResponseObject<>();
         try{
             int dayParts = getDayParts();
             Date currentDate = Date.valueOf(LocalDate.now());
-            List<WeatherCountSearchResponse> data = weatherRepository.searchWeatherCount(hcode, dayParts, currentDate);
+            List<WeatherCountSearchResponse> data = weatherRepository.searchWeatherCount(regionCode, dayParts, currentDate);
 
             response.setResponse(StatusCode.OK, "Success", data);
         } catch (InvalidDataException e) {
@@ -71,24 +73,16 @@ public class WeatherService {
 
             // user 조회
             // db 유저 확인 (user 서비스)
-//            Map<String, Object> params = new HashMap<>();
-//            params.put("userId", userId);
-//            Map<String, Object> responseBody = externalApiService.get(token, "/api/user", params);
-//            if (!"200".equals((String)responseBody.get("statusCode"))) {
-//                  throw new DatabaseException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-//            }
-
-            // 사용자의 행정구역 코드 확인
+            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/getmyinfo");
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
+            }
             weather.setUserId(userId);
 
-            // 위치 확인
-//            Map<String, Object> params = new HashMap<>();
-//            params.put("hcode", post.getHcode());
-            // Map<String, Object> responseBody = externalApiService.get(token, "/api/common/weather", params);
-//            if (!"200".equals((String)responseBody.get("statusCode"))) {
-//                  throw new DatabaseException(StatusCode.BAD_REQUEST,"위치가 존재하지 않습니다.");
-//            }
-            weather.setHcode(dto.getHcode());
+            // 사용자의 행정구역 코드 확인
+            // user.getHcode ...
+
+            weather.setRegionCode(dto.getRegionCode());
 
             // 현재 시간 구간
             weather.setDayParts(dayParts);
@@ -143,6 +137,9 @@ public class WeatherService {
             if(!userId.equals(weather.getUserId())) {
                 throw new InvalidDataException(StatusCode.FORBIDDEN, "권한이 없습니다.");
             }
+
+            // 사용자 위치 조회
+            weather.setRegionCode(dto.getRegionCode());
 
             // 날씨 공통코드 확인
             CommonCode commonCode = commonCodeRepository.findByCode(dto.getWeatherCode())

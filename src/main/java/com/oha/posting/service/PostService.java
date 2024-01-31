@@ -1,19 +1,22 @@
 package com.oha.posting.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.file.FileConfig;
 import com.oha.posting.config.file.FileUtil;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.config.response.StatusCode;
-import com.oha.posting.entity.*;
+import com.oha.posting.dto.external.ExternalLocation;
+import com.oha.posting.dto.external.ExternalUser;
 import com.oha.posting.dto.request.PostInsertRequest;
 import com.oha.posting.dto.request.PostLikeRequest;
 import com.oha.posting.dto.request.PostReportRequest;
 import com.oha.posting.dto.request.PostUpdateRequest;
 import com.oha.posting.dto.response.PostInsertResponse;
 import com.oha.posting.dto.response.PostSearchResponse;
+import com.oha.posting.entity.*;
 import com.oha.posting.repository.CommonCodeRepository;
-import com.oha.posting.repository.KeywordRepository;
 import com.oha.posting.repository.LikeRepository;
 import com.oha.posting.repository.PostRepository;
 import com.querydsl.core.BooleanBuilder;
@@ -39,9 +42,10 @@ public class PostService {
     private final PostRepository postRepository;
     private final ExternalApiService externalApiService;
     private final CommonCodeRepository commonCodeRepository;
-    private final KeywordRepository keywordRepository;
     private final LikeRepository likeRepository;
     private final FileConfig fileConfig;
+
+    private final ObjectMapper objectMapper;
 
     @Value("${file.base-url}")
     private String FILE_BASE_URL;
@@ -58,17 +62,26 @@ public class PostService {
                     .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
 
             PostSearchResponse data = PostSearchResponse.toDto(post);
-            List<String> urls = new ArrayList<>();
             for(PostFile file : post.getFiles()) {
-                urls.add(FILE_BASE_URL+file.getUrl());
+                data.getFiles().add(new PostSearchResponse.PostSearchFile(FILE_BASE_URL+file.getUrl(), file.getSeq()));
             }
-            data.setUrls(urls);
+
+            // db 유저 확인 (user 서비스)
+            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/getmyinfo");
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
+            }
+            ExternalUser user = objectMapper.convertValue(responseBody.get("data"), ExternalUser.class);
+            data.setUserNickname(user.getName());
 
             // 행정구역코드로 위치 조회 API 호출
-            Map<String, Object> params = new HashMap<>();
-            params.put("hcode", post.getHcode());
-            // Map<String, Object> responseBody = externalApiService.get(token, "/api/common/weather", params);
-            // data >> 위치 정보 set
+            responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+post.getRegionCode());
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+            }
+            ExternalLocation location = objectMapper.convertValue(responseBody.get("data"), ExternalLocation.class);
+            data.setLocationInfo(location);
+
             response.setResponse(StatusCode.OK, "Success", data);
         }
         catch (InvalidDataException e) {
@@ -84,19 +97,21 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<PostSearchResponse>> getPostList(Long hcode, Boolean popular, String categoryCode, Integer offset, Integer size) {
+    public ResponseObject<List<PostSearchResponse>> getPostList(String token, Long regionCode, Boolean popular, String categoryCode, Integer offset, Integer size) {
         ResponseObject<List<PostSearchResponse>> response = new ResponseObject<>();
         List<PostSearchResponse> dataList = new ArrayList<>();
         try{
-            // Map<String, Object> params = new HashMap<>();
-            // params.put("hcode", hcode);
-            // Map<String, Object> responseBody = externalApiService.get(token, "/api/common/weather", params);
-            // data >> 위치 정보 set
+            // 행정구역코드로 위치 조회 API 호출
+            Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+regionCode);
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+            }
+            ExternalLocation location = objectMapper.convertValue(responseBody.get("data"), ExternalLocation.class);
             QPost qPost = QPost.post;
 
             // where
             BooleanBuilder builder = new BooleanBuilder();
-            builder.and(qPost.hcode.eq(hcode)); // 위치 (필수)
+            builder.and(qPost.regionCode.eq(regionCode)); // 위치 (필수)
             if(categoryCode != null) { // 카테고리
                 builder.and(qPost.category.code.eq(categoryCode));
             }
@@ -113,38 +128,42 @@ public class PostService {
                 response.setResponse(StatusCode.NOT_FOUND, "게시글이 없습니다.");
             }
             else {
-                List<Long> userIds = new ArrayList<>();
+                Set<Long> userIds = new HashSet<>();
                 for(Post post: postList) {
                     userIds.add(post.getUserId());
                 }
 
 //              user 리스트 조회
-//                Map<String, Object> params = new HashMap<>();
-//                params.put("userIds", userIds);
-//                Map<String, Object> responseBody = externalApiService.get(token, "/api/users", params);
-//                if (!"200".equals((String)responseBody.get("statusCode"))) {
-//                      throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-//                }
+                Map<String, Object> body = new HashMap<>();
+                body.put("userIds", userIds);
+                responseBody = externalApiService.post(token, "/api/user/postSpecificUsers", body);
+                if (!Integer.valueOf(201).equals(responseBody.get("statusCode"))) {
+                      throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
+                }
 
+                List<ExternalUser> userList = objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
                 for(Post post: postList) {
                     PostSearchResponse data = PostSearchResponse.toDto(post);
 
-                    List<String> urls = new ArrayList<>();
                     for(PostFile file : post.getFiles()) {
-                        urls.add(FILE_BASE_URL+file.getUrl());
+                        data.getFiles().add(new PostSearchResponse.PostSearchFile(FILE_BASE_URL+file.getUrl(), file.getSeq()));
                     }
-                    data.setUrls(urls);
 
                     // user 정보 매핑
-                    // 위치 정보 매핑
+                    for(ExternalUser user: userList) {
+                        if (post.getUserId().equals(user.getUserId())) {
+                            data.setUserNickname(user.getName());
+                            break;
+                        }
+                    }
 
+                    // 위치 정보 매핑
+                    data.setLocationInfo(location);
                     dataList.add(data);
                 }
 
                 response.setResponse(StatusCode.OK, "Success", dataList);
             }
-
-
         }
         catch (InvalidDataException e) {
             log.warn("Exception during post search", e);
@@ -155,35 +174,28 @@ public class PostService {
             response.setResponse(StatusCode.SERVER_ERROR, "조회에 실패하였습니다");
         }
 
-
         return response;
     }
-
 
     @Transactional
     public ResponseObject<PostInsertResponse> insertPost(PostInsertRequest dto, List<MultipartFile> files, String token, Long userId) {
         ResponseObject<PostInsertResponse> response = new ResponseObject<>();
         PostInsertResponse data = new PostInsertResponse();
         Post post = Post.toEntity(dto);
-        List<PostFile> fileList = new ArrayList<>();
 
         try {
             // db 유저 확인 (user 서비스)
-            Map<String, Object> params = new HashMap<>();
-            params.put("userId", userId);
-//            Map<String, Object> responseBody = externalApiService.get(token, "/api/user", params);
-//            if (!"200".equals((String)responseBody.get("statusCode"))) {
-//                  throw new DatabaseException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-//            }
+            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/getmyinfo");
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                  throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
+            }
             post.setUserId(userId);
 
-            // db 행정동 확인 (common 서비스)
-            params = new HashMap<>();
-            params.put("hcode", post.getHcode());
-//            responseBody = externalApiService.get(token, "/api/common/weather", params);
-//            if (!"200".equals((String)responseBody.get("statusCode"))) {
-//                  throw new DatabaseException(StatusCode.BAD_REQUEST, "위치가 존재하지 않습니다.");
-//            }
+            // 행정구역코드로 위치 조회 API 호출
+            responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+dto.getRegionCode());
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+            }
 
             // category 조회
             CommonCode commonCode = commonCodeRepository.findByCode(dto.getCategoryCode())
@@ -198,7 +210,9 @@ public class PostService {
             }
 
             /* file */
-            for(MultipartFile file : files) {
+            for(int order=0; order<files.size(); order++) {
+                MultipartFile file = files.get(order);
+
                 if(!fileConfig.isAllowedFile(file)) {
                     throw new InvalidDataException(StatusCode.BAD_REQUEST, "지원되지 않는 확장자입니다.");
                 }
@@ -208,13 +222,12 @@ public class PostService {
 
                 // 파일 db 저장
                 String uuidFileName = UUID.randomUUID() + "." +extension;
-                PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + uuidFileName, url+uuidFileName);
-                fileList.add(postFile);
+                PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + uuidFileName, url+uuidFileName, order);
+                post.getFiles().add(postFile);
 
                 // 파일 저장
                 file.transferTo(new File(SAVE_PATH + "post/" + uuidFileName));
             }
-            post.setFiles(fileList);
 
             Post savedPost = postRepository.save(post);
             data.setPostId(savedPost.getPostId());
@@ -222,12 +235,12 @@ public class PostService {
         }
         catch (InvalidDataException e) {
             log.warn("Exception during post create", e);
-            rollbackFile(fileList);
+            rollbackFile(post.getFiles());
             response.setResponse(e.getStatusCode(), e.getMessage());
         }
         catch (Exception e) {
             log.warn("Exception during post create", e);
-            rollbackFile(fileList);
+            rollbackFile(post.getFiles());
             response.setResponse(StatusCode.SERVER_ERROR, "저장에 실패하였습니다");
         }
 
@@ -272,14 +285,13 @@ public class PostService {
                             (dto.getKeywords()).forEach(keywordName -> post.getKeywords().add(new Keyword(post, keywordName)));
                         }
                         break;
-                    case "hcode":
-                        // Map<String, Object> params = new HashMap<>();
-                        // params.put("hcode", post.getHcode());
-            //            responseBody = externalApiService.get(token, "/api/common/weather", params);
-            //            if (!"200".equals((String)responseBody.get("statusCode"))) {
-                        // throw new DatabaseUpdateException(StatusCode.BAD_REQUEST,"위치가 존재하지 않습니다.");
-            //            }
-                        post.setHcode(dto.getHcode());
+                    case "regionCode":
+                        // 행정구역코드로 위치 조회 API 호출
+                        Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+dto.getRegionCode());
+                        if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                            throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+                        }
+                        post.setRegionCode(dto.getRegionCode());
                         break;
                     case "locationDetail":
                         post.setLocationDetail(dto.getLocationDetail());
@@ -381,12 +393,13 @@ public class PostService {
             if(userId.equals(post.getUserId())) {
                 throw new InvalidDataException(StatusCode.BAD_REQUEST, "본인이 작성한 글은 신고하실 수 없습니다.");
             }
-//            중복 신고 막기
-//            for (Report report : post.getReports()) {
-//                if(userId.equals(report.getUserId())) {
-//                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "신고 내역이 있습니다.");
-//                }
-//            }
+            // 중복 신고 막기
+            for (Report report : post.getReports()) {
+                if(userId.equals(report.getUserId())) {
+                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "신고 내역이 있습니다.");
+                }
+            }
+
             Report newReport = new Report(userId, dto.getContent(), post);
             post.getReports().add(newReport);
             response.setResponse(StatusCode.CREATED, "Success");

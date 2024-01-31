@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface WeatherRepositoryCustom {
 
-    List<WeatherCountSearchResponse> searchWeatherCount(Long hcode, int dayParts, Date currentDate);
+    List<WeatherCountSearchResponse> searchWeatherCount(Long regionCode, int dayParts, Date currentDate);
 }

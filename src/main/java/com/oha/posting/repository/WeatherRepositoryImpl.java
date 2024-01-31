@@ -18,7 +18,7 @@ public class WeatherRepositoryImpl implements WeatherRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<WeatherCountSearchResponse> searchWeatherCount(Long hcode, int dayParts, Date currentDate) {
+    public List<WeatherCountSearchResponse> searchWeatherCount(Long regionCode, int dayParts, Date currentDate) {
         return queryFactory
                 .select(Projections.constructor(WeatherCountSearchResponse.class
                         , commonCode.code
@@ -27,7 +27,7 @@ public class WeatherRepositoryImpl implements WeatherRepositoryCustom {
                 .from(commonCode)
                 .leftJoin(weather)
                 .on(commonCode.code.eq(weather.weatherCommonCode.code)
-                        .and(weather.hcode.eq(hcode))
+                        .and(weather.regionCode.eq(regionCode))
                         .and(weather.dayParts.eq(dayParts))
                         .and(weather.weatherDt.eq((currentDate)))
                 )

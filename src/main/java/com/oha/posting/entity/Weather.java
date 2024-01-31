@@ -28,5 +28,5 @@ public class Weather {
 
     private Date weatherDt;
 
-    private Long hcode;
+    private Long regionCode;
 }

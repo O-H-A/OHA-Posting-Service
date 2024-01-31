@@ -21,9 +21,12 @@ public class PostFile {
     private String savePath;
     private String url;
 
-    public PostFile (Post post, String filePath, String url) {
+    private Integer seq;
+
+    public PostFile (Post post, String filePath, String url, Integer seq) {
         this.post = post;
         this.savePath = filePath;
         this.url = url;
+        this.seq = seq;
     }
 }

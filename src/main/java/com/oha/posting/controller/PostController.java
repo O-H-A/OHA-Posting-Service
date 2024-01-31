@@ -52,12 +52,13 @@ public class PostController {
                                                           **`offset: 결과 집합 시작 위치(0부터 시작), 기본값 0`**\n
                                                           **`size: 반환할 행 최대 수, 기본값 10(최대 100)`**
                                                           """)
-    public ResponseObject<List<PostSearchResponse>> getPostList(@RequestParam(name = "hcode") Long hcode
-                                                              , @RequestParam(name = "likeOrder", required = false) Boolean popular
+    public ResponseObject<List<PostSearchResponse>> getPostList(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
+                                                              , @RequestParam(name = "regionCode") Long regionCode
+                                                              , @RequestParam(name = "popular", required = false) Boolean popular
                                                               , @RequestParam(name = "categoryCode", required = false) String categoryCode
                                                               , @RequestParam(name = "offset", defaultValue = "0") Integer offset
                                                               , @RequestParam(name = "size", defaultValue = "10") @Max(100) Integer size) {
-        return postService.getPostList(hcode, popular, categoryCode, offset, size);
+        return postService.getPostList(token, regionCode, popular, categoryCode, offset, size);
     }
 
     @PostMapping(value = "/post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -69,7 +70,8 @@ public class PostController {
                                                     - 500: 서버 오류\n
                                                     **필수 값:**
                                                     - category
-                                                    - hcode
+                                                    - regionCode\n
+                                                    **현재 파일은 1개만 가능하지만 변경을 고려하여 리스트로 저장/조회하도록 하였습니다.**
                                                     """)
     public ResponseObject<PostInsertResponse> insertPost(@RequestPart(name = "dto") @Validated PostInsertRequest dto
                                                        , @RequestPart(name = "files") @Size(max = 1, message = "파일은 1개까지 가능합니다.") List<MultipartFile> files
@@ -87,7 +89,7 @@ public class PostController {
                                                     - 404: 게시글 없음
                                                     - 500: 서버 오류\n
                                                     **`updateItem에 해당되는 속성만 업데이트 됩니다. ","로 구분해서 정확히 입력해주세요. (파일 속성명 files)`**\n
-                                                    **`keywords 수정하는 경우 전체 삭제/등록 로직이고, keywords가 null이거나 빈 리스트면 삭제만 됩니다.`**\n
+                                                    **`keywords 수정하는 경우 keywords가 없거나 빈 리스트면 삭제만 됩니다.`**\n
                                                     """)
     public ResponseObject<?> updatePost(@RequestPart(name = "dto") @Validated PostUpdateRequest dto
                                       , @RequestPart(name = "files", required = false) @Size(max = 1, message = "파일은 1개까지 가능합니다.") List<MultipartFile> files

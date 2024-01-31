@@ -31,7 +31,7 @@ public class Post {
 
     private String content;
 
-    private Long hcode;
+    private Long regionCode;
 
     private String locationDetail;
 
@@ -40,14 +40,14 @@ public class Post {
     private Timestamp updDtm;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PostFile> files;
+    private List<PostFile> files = new ArrayList<>();
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Report> reports;
 
     public static Post toEntity(PostInsertRequest dto) {
         Post post = new Post();
-        post.setHcode(dto.getHcode());
+        post.setRegionCode(dto.getRegionCode());
         post.setContent(dto.getContent());
         post.setRegDtm(new Timestamp(System.currentTimeMillis()));
         post.setLocationDetail(dto.getLocationDetail());
