@@ -92,7 +92,7 @@ public class PostController {
                                                     **`keywords 수정하는 경우 keywords가 없거나 빈 리스트면 삭제만 됩니다.`**\n
                                                     """)
     public ResponseObject<?> updatePost(@RequestPart(name = "dto") @Validated PostUpdateRequest dto
-                                      , @RequestPart(name = "files", required = false) @Size(max = 1, message = "파일은 1개까지 가능합니다.") List<MultipartFile> files
+                                      , @RequestPart(name = "files", required = false) @Size(min = 1, max = 1, message = "파일은 1개만 가능합니다.") List<MultipartFile> files
                                       , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
                                       , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) {
         return postService.updatePost(dto, files, token, userId);

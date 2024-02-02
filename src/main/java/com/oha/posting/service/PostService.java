@@ -210,24 +210,7 @@ public class PostService {
             }
 
             /* file */
-            for(int order=0; order<files.size(); order++) {
-                MultipartFile file = files.get(order);
-
-                if(!fileConfig.isAllowedFile(file)) {
-                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "지원되지 않는 확장자입니다.");
-                }
-
-                String extension = fileConfig.getFileExtension(file.getOriginalFilename());
-                String url = "/images/post/";
-
-                // 파일 db 저장
-                String uuidFileName = UUID.randomUUID() + "." +extension;
-                PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + uuidFileName, url+uuidFileName, order);
-                post.getFiles().add(postFile);
-
-                // 파일 저장
-                file.transferTo(new File(SAVE_PATH + "post/" + uuidFileName));
-            }
+            saveFiles(files, post);
 
             Post savedPost = postRepository.save(post);
             data.setPostId(savedPost.getPostId());
@@ -296,6 +279,11 @@ public class PostService {
                     case "locationDetail":
                         post.setLocationDetail(dto.getLocationDetail());
                         break;
+                    case "files":
+                        rollbackFile(post.getFiles());
+                        post.getFiles().clear();
+                        saveFiles(files, post);
+                        break;
                     default:
                         throw new InvalidDataException(StatusCode.BAD_REQUEST, "일치하는 수정 항목이 없습니다.");
                 }
@@ -314,6 +302,27 @@ public class PostService {
         }
 
         return response;
+    }
+
+    private void saveFiles(List<MultipartFile> files, Post post) throws IOException {
+        for(int order=0; order<files.size(); order++) {
+            MultipartFile file = files.get(order);
+
+            if(!fileConfig.isAllowedFile(file)) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST, "지원하지 않는 확장자입니다.");
+            }
+
+            String extension = fileConfig.getFileExtension(file.getOriginalFilename());
+            String url = "/images/post/";
+
+            // 파일 db 저장
+            String uuidFileName = UUID.randomUUID() + "." +extension;
+            PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + uuidFileName, url+uuidFileName, order);
+            post.getFiles().add(postFile);
+
+            // 파일 저장
+            file.transferTo(new File(SAVE_PATH + "post/" + uuidFileName));
+        }
     }
 
     @Transactional
