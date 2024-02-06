@@ -235,7 +235,9 @@ public class PostService {
         for (PostFile file : fileList) {
             try {
                 FileUtil.deleteFile(file.getSavePath());
-            } catch (IOException e) {}
+            } catch (IOException e) {
+                log.warn("Exception during file delete", e);
+            }
         }
     }
 
@@ -313,7 +315,7 @@ public class PostService {
             }
 
             String extension = fileConfig.getFileExtension(file.getOriginalFilename());
-            String url = "/images/post/";
+            String url = "/files/post/";
 
             // 파일 db 저장
             String uuidFileName = UUID.randomUUID() + "." +extension;
