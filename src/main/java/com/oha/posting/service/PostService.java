@@ -306,6 +306,7 @@ public class PostService {
     }
 
     private void saveFiles(List<MultipartFile> files, Post post) throws IOException {
+        long timestamp = System.currentTimeMillis();
         for(int order=0; order<files.size(); order++) {
             MultipartFile file = files.get(order);
 
@@ -317,12 +318,12 @@ public class PostService {
             String url = "/files/post/";
 
             // 파일 db 저장
-            String uuidFileName = UUID.randomUUID() + "." +extension;
-            PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + uuidFileName, url+uuidFileName, order);
+            String fileName = timestamp + "" + post.getUserId() + "" + order + "." + extension;
+            PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + fileName, url+fileName, order);
             post.getFiles().add(postFile);
 
             // 파일 저장
-            file.transferTo(new File(SAVE_PATH + "post/" + uuidFileName));
+            file.transferTo(new File(SAVE_PATH + "post/" + fileName));
         }
     }
 
