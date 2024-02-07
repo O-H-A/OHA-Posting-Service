@@ -22,6 +22,7 @@ public class WeatherRepositoryImpl implements WeatherRepositoryCustom {
         return queryFactory
                 .select(Projections.constructor(WeatherCountSearchResponse.class
                         , commonCode.code
+                        , commonCode.codeName
                         , weather.weatherCommonCode.count()
                         ))
                 .from(commonCode)

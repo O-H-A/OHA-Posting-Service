@@ -12,7 +12,8 @@ public class WeatherCountSearchResponse {
 
     @Schema(description = "날씨공통코드", example = "WTHR_PARTLY_CLOUDY")
     private String weatherCode;
-
+    @Schema(description = "날씨이름", example = "구름 많음")
+    private String weatherName;
     @Schema(description = "개수", example = "4")
     private Long count;
 }
