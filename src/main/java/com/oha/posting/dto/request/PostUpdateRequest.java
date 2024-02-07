@@ -1,6 +1,7 @@
 package com.oha.posting.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -20,7 +21,7 @@ public class PostUpdateRequest {
     private String content;
 
     @Schema(description = "카테고리 코드", example = "CTGR_RAINBOW")
-    @NotBlank(message = "카테고리를 선택해주세요.")
+    @Size(min = 1, message = "카테고리를 선택해주세요.")
     private String categoryCode;
 
     @Schema(description = "키워드", example = "[\"무지개\", \"구름\", \"가을 하늘\"]")
@@ -28,7 +29,7 @@ public class PostUpdateRequest {
     private List<String> keywords;
 
     @Schema(description = "행정구역코드", example = "1111065000")
-    @NotNull(message = "위치를 선택해주세요.")
+    @Min(value = 1, message = "위치를 선택해주세요.")
     private Long regionCode;
 
     @Schema(description = "위치 추가 정보", example = "영종도 다리")

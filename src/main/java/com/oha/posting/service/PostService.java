@@ -277,6 +277,9 @@ public class PostService {
                         post.setLocationDetail(dto.getLocationDetail());
                         break;
                     case "files":
+                        if (files == null) {
+                            throw new InvalidDataException(StatusCode.BAD_REQUEST,"파일을 선택해주세요.");
+                        }
                         rollbackFile(post.getFiles());
                         post.getFiles().clear();
                         saveFiles(files, post);
