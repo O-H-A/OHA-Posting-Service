@@ -63,7 +63,7 @@ public class PostService {
 
             PostSearchResponse data = PostSearchResponse.toDto(post);
             for(PostFile file : post.getFiles()) {
-                data.getFiles().add(new PostSearchResponse.PostSearchFile(FILE_BASE_URL+file.getUrl(), file.getSeq()));
+                data.getFiles().add(FILE_BASE_URL+file.getUrl());
             }
 
             // db 유저 확인 (user 서비스)
@@ -146,7 +146,7 @@ public class PostService {
                     PostSearchResponse data = PostSearchResponse.toDto(post);
 
                     for(PostFile file : post.getFiles()) {
-                        data.getFiles().add(new PostSearchResponse.PostSearchFile(FILE_BASE_URL+file.getUrl(), file.getSeq()));
+                        data.getFiles().add(FILE_BASE_URL+file.getUrl());
                     }
 
                     // user 정보 매핑
