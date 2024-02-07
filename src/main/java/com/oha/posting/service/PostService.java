@@ -67,7 +67,7 @@ public class PostService {
             }
 
             // db 유저 확인 (user 서비스)
-            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/getmyinfo");
+            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/myinfo");
             if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
                 throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
             }
@@ -75,7 +75,7 @@ public class PostService {
             data.setUserNickname(user.getName());
 
             // 행정구역코드로 위치 조회 API 호출
-            responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+post.getRegionCode());
+            responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+post.getRegionCode());
             if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
                 throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
             }
@@ -102,7 +102,7 @@ public class PostService {
         List<PostSearchResponse> dataList = new ArrayList<>();
         try{
             // 행정구역코드로 위치 조회 API 호출
-            Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+regionCode);
+            Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+regionCode);
             if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
                 throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
             }
@@ -184,15 +184,10 @@ public class PostService {
         Post post = Post.toEntity(dto);
 
         try {
-            // db 유저 확인 (user 서비스)
-            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/getmyinfo");
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                  throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-            }
             post.setUserId(userId);
 
             // 행정구역코드로 위치 조회 API 호출
-            responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+dto.getRegionCode());
+            Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+dto.getRegionCode());
             if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
                 throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
             }
@@ -272,7 +267,7 @@ public class PostService {
                         break;
                     case "regionCode":
                         // 행정구역코드로 위치 조회 API 호출
-                        Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getDistrictName/"+dto.getRegionCode());
+                        Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+dto.getRegionCode());
                         if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
                             throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
                         }

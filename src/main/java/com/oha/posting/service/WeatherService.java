@@ -71,14 +71,6 @@ public class WeatherService {
                     .orElseThrow(() ->  new InvalidDataException(StatusCode.BAD_REQUEST, "날씨 유형이 없습니다."));
             weather.setWeatherCommonCode(commonCode);
 
-            // user 조회
-            // db 유저 확인 (user 서비스)
-            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/getmyinfo");
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-            }
-            weather.setUserId(userId);
-
             // 사용자의 행정구역 코드 확인
             // user.getHcode ...
 
