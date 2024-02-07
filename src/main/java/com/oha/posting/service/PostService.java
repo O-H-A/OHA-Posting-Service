@@ -136,7 +136,7 @@ public class PostService {
 //              user 리스트 조회
                 Map<String, Object> body = new HashMap<>();
                 body.put("userIds", userIds);
-                responseBody = externalApiService.post(token, "/api/user/postSpecificUsers", body);
+                responseBody = externalApiService.post(token, "/api/user/specificUsers", body);
                 if (!Integer.valueOf(201).equals(responseBody.get("statusCode"))) {
                       throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
                 }
