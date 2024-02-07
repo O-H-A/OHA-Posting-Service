@@ -58,7 +58,7 @@ public class PostService {
         ResponseObject<PostSearchResponse> response = new ResponseObject<>();
 
         try {
-            Post post = postRepository.findById(postId)
+            Post post = postRepository.findByPostIdAndIsDel(postId, false)
                     .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
 
             PostSearchResponse data = PostSearchResponse.toDto(post);
@@ -111,6 +111,7 @@ public class PostService {
 
             // where
             BooleanBuilder builder = new BooleanBuilder();
+            builder.and(qPost.isDel.eq(false));
             builder.and(qPost.regionCode.eq(regionCode)); // 위치 (필수)
             if(categoryCode != null) { // 카테고리
                 builder.and(qPost.category.code.eq(categoryCode));
@@ -241,7 +242,7 @@ public class PostService {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
-            Post post = postRepository.findById(dto.getPostId())
+            Post post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
                     .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
 
             if (!userId.equals(post.getUserId())) {
@@ -330,14 +331,15 @@ public class PostService {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
-            Post post = postRepository.findById(postId)
+            Post post = postRepository.findByPostIdAndIsDel(postId, false)
                     .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
 
             if (!userId.equals(post.getUserId())) {
                 throw new InvalidDataException(StatusCode.FORBIDDEN, "권한이 없습니다.");
             }
 
-            postRepository.delete(post);
+            post.setIsDel(true);
+            post.setDelDtm(new Timestamp(System.currentTimeMillis()));
             rollbackFile(post.getFiles());
 
             response.setResponse(StatusCode.OK, "Success");
@@ -359,7 +361,7 @@ public class PostService {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
-            Post post = postRepository.findById(dto.getPostId())
+            Post post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
                     .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
 
             LikeId likeId = new LikeId(post.getPostId(), userId);
@@ -396,7 +398,7 @@ public class PostService {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
-            Post post = postRepository.findById(dto.getPostId())
+            Post post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
                     .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
 
             if(userId.equals(post.getUserId())) {

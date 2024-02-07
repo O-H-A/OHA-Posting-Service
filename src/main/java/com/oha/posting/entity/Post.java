@@ -45,12 +45,17 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Report> reports;
 
+    private Boolean isDel;
+
+    private Timestamp delDtm;
+
     public static Post toEntity(PostInsertRequest dto) {
         Post post = new Post();
         post.setRegionCode(dto.getRegionCode());
         post.setContent(dto.getContent());
         post.setRegDtm(new Timestamp(System.currentTimeMillis()));
         post.setLocationDetail(dto.getLocationDetail());
+        post.setIsDel(false);
         return post;
     }
 }

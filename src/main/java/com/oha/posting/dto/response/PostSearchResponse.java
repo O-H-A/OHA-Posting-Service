@@ -33,6 +33,8 @@ public class PostSearchResponse {
 
     private String categoryCode;
 
+    private String categoryName;
+
     private List<String> keywords;
 
     @Schema(example = "별밤투어")
@@ -75,6 +77,7 @@ public class PostSearchResponse {
         response.likeUsers = (post.getLikes()).stream().map(Like::getLikeId).map(LikeId::getUserId).toList();
         response.likeCount = response.getLikeUsers().size();
         response.categoryCode = post.getCategory().getCode();
+        response.categoryName = post.getCategory().getCodeName();
         response.keywords = (post.getKeywords()).stream().map(Keyword::getKeywordName).toList();
         response.content = post.getContent();
         response.locationDetail = post.getLocationDetail();
