@@ -1,6 +1,11 @@
 package com.oha.posting.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oha.posting.config.exception.InvalidDataException;
+import com.oha.posting.config.response.StatusCode;
+import com.oha.posting.dto.external.ExternalLocation;
+import com.oha.posting.dto.external.ExternalUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -13,7 +18,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RequiredArgsConstructor
 @Service
@@ -60,6 +67,73 @@ public class ExternalApiService {
         );
 
         return objectMapper.readValue(response.getBody(), Map.class);
+    }
+
+    // 같은 격자의 행정구역 조회
+    public List<ExternalLocation> getLocationList(String token, Long regionCode) {
+        try {
+            Map<String, Object> responseBody = get(token, "/api/common/location/samegrid/"+regionCode);
+
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+            } else {
+                return objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
+            }
+        }
+        catch (Exception e) {
+            throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+        }
+    }
+
+    // 자주 가는 지역 리스트 조회
+    public List<ExternalLocation> getUserLocationList(String token) {
+        try {
+            Map<String, Object> responseBody = get(token, "/api/common/location/freqdistrict");
+
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자 위치가 존재하지 않습니다.");
+            } else {
+                return objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
+            }
+        }
+        catch (Exception e) {
+            throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자 위치가 존재하지 않습니다.");
+        }
+    }
+
+    // 행정구역 조회
+    public ExternalLocation getLocation(String token, Long regionCode) {
+        try {
+            Map<String, Object> responseBody = get(token, "/api/common/location/getnamebycode/"+regionCode);
+            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+            }
+            else {
+                return objectMapper.convertValue(responseBody.get("data"), ExternalLocation.class);
+            }
+        }
+        catch (Exception e) {
+            throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
+        }
+    }
+
+    // user 리스트 조회
+    public List<ExternalUser> getUserList(String token, Set<Long> userIds) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("userIds", userIds);
+
+            Map<String, Object> responseBody = post(token, "/api/user/specificUsers", body);
+            if (!Integer.valueOf(201).equals(responseBody.get("statusCode"))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
+            }
+            else {
+                return objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
+            }
+        }
+        catch (Exception e) {
+            throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
+        }
     }
 
 }
