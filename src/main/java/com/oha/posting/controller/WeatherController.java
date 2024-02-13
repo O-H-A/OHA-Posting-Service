@@ -29,8 +29,9 @@ public class WeatherController {
                                                      - 200: 성공
                                                      - 500: 서버 오류
                                                      """)
-    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(@RequestParam(name = "regionCode") Long regionCode) {
-        return weatherService.getWeatherCount(regionCode);
+    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
+                                                                          , @RequestParam(name = "regionCode") Long regionCode) {
+        return weatherService.getWeatherCount(token, regionCode);
     }
 
     @PostMapping("/weather")
@@ -57,8 +58,9 @@ public class WeatherController {
                                                      - 500: 서버 오류\n
                                                      """)
     public ResponseObject<?> updateWeather(@RequestBody @Validated WeatherUpdateRequest dto
-                                         , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) {
-        return weatherService.updateWeather(dto, userId);
+                                         , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
+                                         , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token) {
+        return weatherService.updateWeather(dto, userId, token);
     }
 
 

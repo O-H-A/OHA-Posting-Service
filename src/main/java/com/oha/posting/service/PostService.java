@@ -1,7 +1,5 @@
 package com.oha.posting.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.file.FileConfig;
 import com.oha.posting.config.file.FileUtil;
@@ -45,8 +43,6 @@ public class PostService {
     private final LikeRepository likeRepository;
     private final FileConfig fileConfig;
 
-    private final ObjectMapper objectMapper;
-
     @Value("${file.base-url}")
     private String FILE_BASE_URL;
 
@@ -66,20 +62,12 @@ public class PostService {
                 data.getFiles().add(FILE_BASE_URL+file.getUrl());
             }
 
-            // db 유저 확인 (user 서비스)
-            Map<String, Object> responseBody = externalApiService.get(token, "/api/user/myinfo");
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-            }
-            ExternalUser user = objectMapper.convertValue(responseBody.get("data"), ExternalUser.class);
-            data.setUserNickname(user.getName());
+            // db 유저 정보 (user 서비스)
+            List<ExternalUser> userList = externalApiService.getUserList(token, Set.of(post.getUserId()));
+            data.setUserNickname(userList.get(0).getName());
 
             // 행정구역코드로 위치 조회 API 호출
-            responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+post.getRegionCode());
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
-            }
-            ExternalLocation location = objectMapper.convertValue(responseBody.get("data"), ExternalLocation.class);
+            ExternalLocation location = externalApiService.getLocation(token, post.getRegionCode());
             data.setLocationInfo(location);
 
             response.setResponse(StatusCode.OK, "Success", data);
@@ -102,17 +90,16 @@ public class PostService {
         List<PostSearchResponse> dataList = new ArrayList<>();
         try{
             // 행정구역코드로 위치 조회 API 호출
-            Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+regionCode);
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
-            }
-            ExternalLocation location = objectMapper.convertValue(responseBody.get("data"), ExternalLocation.class);
+            List<ExternalLocation> locationList = externalApiService.getLocationList(token, regionCode);
+            // 주변 동네 포함
+            List<Long> regionCodes = locationList.stream().map(item -> Long.parseLong(item.getCode())).toList();
+
             QPost qPost = QPost.post;
 
             // where
             BooleanBuilder builder = new BooleanBuilder();
             builder.and(qPost.isDel.eq(false));
-            builder.and(qPost.regionCode.eq(regionCode)); // 위치 (필수)
+            builder.and(qPost.regionCode.in(regionCodes)); // 위치 (필수)
             if(categoryCode != null) { // 카테고리
                 builder.and(qPost.category.code.eq(categoryCode));
             }
@@ -135,14 +122,7 @@ public class PostService {
                 }
 
 //              user 리스트 조회
-                Map<String, Object> body = new HashMap<>();
-                body.put("userIds", userIds);
-                responseBody = externalApiService.post(token, "/api/user/specificUsers", body);
-                if (!Integer.valueOf(201).equals(responseBody.get("statusCode"))) {
-                      throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-                }
-
-                List<ExternalUser> userList = objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
+                List<ExternalUser> userList = externalApiService.getUserList(token, userIds);
                 for(Post post: postList) {
                     PostSearchResponse data = PostSearchResponse.toDto(post);
 
@@ -159,7 +139,13 @@ public class PostService {
                     }
 
                     // 위치 정보 매핑
-                    data.setLocationInfo(location);
+                    for (ExternalLocation location : locationList) {
+                        if (post.getRegionCode().toString().equals(location.getCode())) {
+                            data.setLocationInfo(location);
+                            break;
+                        }
+                    }
+
                     dataList.add(data);
                 }
 
@@ -188,10 +174,7 @@ public class PostService {
             post.setUserId(userId);
 
             // 행정구역코드로 위치 조회 API 호출
-            Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+dto.getRegionCode());
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
-            }
+            externalApiService.getLocation(token, post.getRegionCode());
 
             // category 조회
             CommonCode commonCode = commonCodeRepository.findByCode(dto.getCategoryCode())
@@ -268,10 +251,7 @@ public class PostService {
                         break;
                     case "regionCode":
                         // 행정구역코드로 위치 조회 API 호출
-                        Map<String, Object> responseBody = externalApiService.get(token, "/api/common/location/getnamebycode/"+dto.getRegionCode());
-                        if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                            throw new InvalidDataException(StatusCode.BAD_REQUEST,"행정구역이 존재하지 않습니다.");
-                        }
+                        externalApiService.getLocation(token, post.getRegionCode());
                         post.setRegionCode(dto.getRegionCode());
                         break;
                     case "locationDetail":

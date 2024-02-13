@@ -3,6 +3,7 @@ package com.oha.posting.service;
 import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.config.response.StatusCode;
+import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.request.WeatherInsertRequest;
 import com.oha.posting.dto.request.WeatherUpdateRequest;
 import com.oha.posting.dto.response.WeatherCountSearchResponse;
@@ -20,7 +21,6 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Map;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -32,12 +32,18 @@ public class WeatherService {
     private final ExternalApiService externalApiService;
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(Long regionCode) {
+    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(String token, Long regionCode) {
         ResponseObject<List<WeatherCountSearchResponse>> response = new ResponseObject<>();
         try{
             int dayParts = getDayParts();
             Date currentDate = Date.valueOf(LocalDate.now());
-            List<WeatherCountSearchResponse> data = weatherRepository.searchWeatherCount(regionCode, dayParts, currentDate);
+
+            // 행정구역코드로 위치 조회 API 호출
+            List<ExternalLocation> locationList = externalApiService.getLocationList(token, regionCode);
+            // 주변 동네 포함
+            List<Long> regionCodes = locationList.stream().map(item -> Long.parseLong(item.getCode())).toList();
+
+            List<WeatherCountSearchResponse> data = weatherRepository.searchWeatherCount(regionCodes, dayParts, currentDate);
 
             response.setResponse(StatusCode.OK, "Success", data);
         } catch (InvalidDataException e) {
@@ -71,8 +77,11 @@ public class WeatherService {
                     .orElseThrow(() ->  new InvalidDataException(StatusCode.BAD_REQUEST, "날씨 유형이 없습니다."));
             weather.setWeatherCommonCode(commonCode);
 
-            // 사용자의 행정구역 코드 확인
-            // user.getHcode ...
+            // 사용자 자주 가는 지역 확인
+            List<ExternalLocation> userLocationList = externalApiService.getUserLocationList(token);
+            if(userLocationList.stream().noneMatch(item -> dto.getRegionCode().toString().equals(item.getCode()))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST, "자주 가는 지역이 아닙니다.");
+            }
 
             weather.setRegionCode(dto.getRegionCode());
 
@@ -81,6 +90,8 @@ public class WeatherService {
 
             // 오늘 날짜
             weather.setWeatherDt(currentDate);
+
+            weather.setUserId(userId);
 
             // DB 저장
             Weather savedWeather = weatherRepository.save(weather);
@@ -117,7 +128,7 @@ public class WeatherService {
     }
 
     @Transactional
-    public ResponseObject<?> updateWeather(WeatherUpdateRequest dto, Long userId) {
+    public ResponseObject<?> updateWeather(WeatherUpdateRequest dto, Long userId, String token) {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
@@ -130,7 +141,11 @@ public class WeatherService {
                 throw new InvalidDataException(StatusCode.FORBIDDEN, "권한이 없습니다.");
             }
 
-            // 사용자 위치 조회
+            // 사용자 자주 가는 지역 확인
+            List<ExternalLocation> userLocationList = externalApiService.getUserLocationList(token);
+            if(userLocationList.stream().noneMatch(item -> dto.getRegionCode().toString().equals(item.getCode()))) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST, "자주 가는 지역이 아닙니다.");
+            }
             weather.setRegionCode(dto.getRegionCode());
 
             // 날씨 공통코드 확인
