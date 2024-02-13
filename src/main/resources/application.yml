@@ -1,9 +1,8 @@
 server:
-  port: 8010
+  port: ${PORT}
 
 spring:
   profiles:
-#    active: local
     active: ${PROFILE}
 
   datasource:
