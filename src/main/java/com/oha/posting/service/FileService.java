@@ -1,7 +1,8 @@
 package com.oha.posting.service;
 
 import com.oha.posting.config.file.FileUtil;
-import marvin.image.MarvinImage;
+import net.coobird.thumbnailator.Thumbnails;
+import net.coobird.thumbnailator.geometry.Positions;
 import org.jcodec.api.FrameGrab;
 import org.jcodec.api.JCodecException;
 import org.jcodec.common.io.NIOUtils;
@@ -14,9 +15,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-
-import static marvinplugins.MarvinPluginCollection.crop;
-import static marvinplugins.MarvinPluginCollection.scale;
 
 @Service
 public class FileService {
@@ -54,40 +52,30 @@ public class FileService {
         int targetHeight = 300;
 
         double aspectRatio = (double) originWidth / originHeight;
-        MarvinImage imageMarvin = new MarvinImage(image);
-
-        int centerX, centerY, halfWidth, halfHeight, cropX, cropY;
 
         if (originWidth >= targetWidth && originHeight >= targetHeight) {
             int scaledWidth = (originWidth < originHeight) ? targetSize : (int) (targetSize * aspectRatio);
             int scaledHeight = (originWidth < originHeight) ? (int) (targetSize / aspectRatio) : targetSize;
 
-            scale(imageMarvin.clone(), imageMarvin, scaledWidth, scaledHeight);
+            image = Thumbnails.of(image) // 리사이징
+                    .size(scaledWidth, scaledHeight)
+                    .asBufferedImage();
 
-            // 원본 이미지의 중심 좌표
-            centerX = scaledWidth / 2;
-            centerY = scaledHeight / 2;
+            Thumbnails.of(image)
+                    .sourceRegion(Positions.CENTER, targetWidth, targetHeight) // 크롭
+                    .size(targetWidth, targetHeight)
+                    .outputFormat("jpg")
+                    .toFile(new File(thumbnailPath));
         }
         else {
             targetWidth = Math.min(originWidth, originHeight);
             targetHeight = Math.min(originWidth, originHeight);
 
-            // 원본 이미지의 중심 좌표
-            centerX = originWidth / 2;
-            centerY = originHeight / 2;
+            Thumbnails.of(image)
+                    .sourceRegion(Positions.CENTER, targetWidth, targetHeight) // 크롭
+                    .size(targetWidth, targetHeight)
+                    .outputFormat("jpg")
+                    .toFile(new File(thumbnailPath));
         }
-
-        // 자를 영역의 반 너비와 반 높이
-        halfWidth = targetWidth / 2;
-        halfHeight = targetHeight / 2;
-
-        // 자를 영역의 좌상단 좌표
-        cropX = centerX - halfWidth;
-        cropY = centerY - halfHeight;
-
-        crop(imageMarvin.clone(), imageMarvin, cropX, cropY, targetWidth, targetHeight);
-
-        BufferedImage bi = imageMarvin.getBufferedImageNoAlpha();
-        ImageIO.write(bi, "jpg" ,new File(thumbnailPath.substring(0, thumbnailPath.indexOf(".")+1) + "jpg"));
     }
 }
