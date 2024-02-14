@@ -17,16 +17,17 @@ public class PostFile {
     @ManyToOne
     @JoinColumn(name = "post_id")
     private Post post;
+    private String directory;
+    private String fileName;
 
-    private String savePath;
-    private String url;
-
+    private String thumbnailName;
     private Integer seq;
 
-    public PostFile (Post post, String filePath, String url, Integer seq) {
+    public PostFile (Post post, String directory, String fileName, String thumbnailName, Integer seq) {
         this.post = post;
-        this.savePath = filePath;
-        this.url = url;
+        this.directory = directory;
+        this.fileName = fileName;
+        this.thumbnailName = thumbnailName;
         this.seq = seq;
     }
 }

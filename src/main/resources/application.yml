@@ -22,6 +22,11 @@ spring:
         format_sql: true
     open-in-view: false
 
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
 springdoc:
   swagger-ui:
     path: /api/posting/swagger-ui

@@ -52,6 +52,13 @@ dependencies {
     // java.lang.NoClassDefFoundError:javax/persistence/Entity 에러 방지
     annotationProcessor "jakarta.persistence:jakarta.persistence-api"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+
+    // 이미지 크기 조정
+    implementation 'com.github.downgoon:marvin:1.5.5'
+    implementation 'com.github.downgoon:MarvinPlugins:1.5.5'
+
+    // 동영상 썸네일 얻기
+    implementation 'org.jcodec:jcodec-javase:0.2.5'
 }
 
 tasks.named('test') {

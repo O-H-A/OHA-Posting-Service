@@ -67,8 +67,8 @@ public class PostSearchResponse {
     @Schema(example = "2024-01-30T15:13:37.875")
     private LocalDateTime updDtm;
 
-    @Schema(description = "파일URL", example = "[\"http://localhost/images/post/adjawdalkjdasd.jpg\"]")
-    private List<String> files = new ArrayList<>();
+    @Schema(description = "파일URL")
+    private List<PostSearchFile> files = new ArrayList<>();
 
     public static PostSearchResponse toDto(Post post) {
         PostSearchResponse response = new PostSearchResponse();
@@ -92,5 +92,19 @@ public class PostSearchResponse {
         this.firstAddress = location.getFirstAddress();
         this.secondAddress = location.getSecondAddress();
         this.thirdAddress = location.getThirdAddress();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PostSearchFile {
+        @Schema(description = "파일URL", example = "http://localhost/images/post/adjawdalkjdasd.jpg")
+        private String url;
+
+        @Schema(description = "썸네일URL", example = "http://localhost/images/post/adjawdalkjdasd.jpg")
+        private String thumbnailUrl;
+
+        @Schema(description = "파일순서", example = "0")
+        private Integer seq;
     }
 }

@@ -21,13 +21,13 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jcodec.api.JCodecException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
@@ -42,6 +42,7 @@ public class PostService {
     private final CommonCodeRepository commonCodeRepository;
     private final LikeRepository likeRepository;
     private final FileConfig fileConfig;
+    private final FileService fileService;
 
     @Value("${file.base-url}")
     private String FILE_BASE_URL;
@@ -59,7 +60,11 @@ public class PostService {
 
             PostSearchResponse data = PostSearchResponse.toDto(post);
             for(PostFile file : post.getFiles()) {
-                data.getFiles().add(FILE_BASE_URL+file.getUrl());
+                data.getFiles().add(new PostSearchResponse.PostSearchFile(
+                        FILE_BASE_URL+ "/files/post/"+file.getFileName(),
+                        FILE_BASE_URL+ "/files/post/"+file.getThumbnailName(),
+                        file.getSeq()
+                ));
             }
 
             // db 유저 정보 (user 서비스)
@@ -127,7 +132,11 @@ public class PostService {
                     PostSearchResponse data = PostSearchResponse.toDto(post);
 
                     for(PostFile file : post.getFiles()) {
-                        data.getFiles().add(FILE_BASE_URL+file.getUrl());
+                        data.getFiles().add(new PostSearchResponse.PostSearchFile(
+                                FILE_BASE_URL+ "/files/post/"+file.getFileName(),
+                                FILE_BASE_URL+ "/files/post/"+file.getThumbnailName(),
+                                file.getSeq()
+                        ));
                     }
 
                     // user 정보 매핑
@@ -213,7 +222,8 @@ public class PostService {
     public void rollbackFile(List<PostFile> fileList) {
         for (PostFile file : fileList) {
             try {
-                FileUtil.deleteFile(file.getSavePath());
+                FileUtil.deleteFile(file.getDirectory()+file.getFileName());
+                FileUtil.deleteFile(file.getDirectory()+file.getThumbnailName());
             } catch (IOException e) {
                 log.warn("Exception during file delete", e);
             }
@@ -285,7 +295,7 @@ public class PostService {
         return response;
     }
 
-    private void saveFiles(List<MultipartFile> files, Post post) throws IOException {
+    private void saveFiles(List<MultipartFile> files, Post post) throws IOException, JCodecException {
         long timestamp = System.currentTimeMillis();
         for(int order=0; order<files.size(); order++) {
             MultipartFile file = files.get(order);
@@ -294,16 +304,18 @@ public class PostService {
                 throw new InvalidDataException(StatusCode.BAD_REQUEST, "지원하지 않는 확장자입니다.");
             }
 
-            String extension = fileConfig.getFileExtension(file.getOriginalFilename());
-            String url = "/files/post/";
+            String extension = FileUtil.getFileExtension(file.getOriginalFilename());
 
             // 파일 db 저장
-            String fileName = timestamp + "" + post.getUserId() + "" + order + "." + extension;
-            PostFile postFile = new PostFile(post, SAVE_PATH + "post/" + fileName, url+fileName, order);
+            String fileName = timestamp + "" + post.getUserId() + "" + order;
+            String thumbnailName = "s_"+fileName;
+            String postSavePath = SAVE_PATH + "post/";
+
+            PostFile postFile = new PostFile(post, postSavePath, fileName + "." + extension, thumbnailName+".jpg", order);
             post.getFiles().add(postFile);
 
-            // 파일 저장
-            file.transferTo(new File(SAVE_PATH + "post/" + fileName));
+            // 파일, 썸네일 저장
+            fileService.saveFileWithThumbnail(file, postSavePath, fileName+ "." + extension);
         }
     }
 
