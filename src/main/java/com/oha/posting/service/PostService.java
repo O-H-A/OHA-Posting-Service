@@ -7,10 +7,8 @@ import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.config.response.StatusCode;
 import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.external.ExternalUser;
-import com.oha.posting.dto.request.PostInsertRequest;
-import com.oha.posting.dto.request.PostLikeRequest;
-import com.oha.posting.dto.request.PostReportRequest;
-import com.oha.posting.dto.request.PostUpdateRequest;
+import com.oha.posting.dto.request.*;
+import com.oha.posting.dto.response.PostBatchSearchResponse;
 import com.oha.posting.dto.response.PostInsertResponse;
 import com.oha.posting.dto.response.PostSearchResponse;
 import com.oha.posting.entity.*;
@@ -413,6 +411,38 @@ public class PostService {
         } catch (Exception e) {
             log.warn("Exception during post report", e);
             response.setResponse(StatusCode.SERVER_ERROR, "신고에 실패하였습니다");
+        }
+
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseObject<List<PostBatchSearchResponse>> searchPostBatch(PostBatchSearchRequest dto) {
+
+        ResponseObject<List<PostBatchSearchResponse>> response = new ResponseObject<>();
+        try {
+            QPost qPost = QPost.post;
+
+            BooleanBuilder builder = new BooleanBuilder();
+            builder.and(qPost.postId.in(dto.getPostIds()));
+            List<Post> postList = postRepository.searchPostBatch(builder);
+
+            if(postList.isEmpty()) {
+                response.setResponse(StatusCode.NOT_FOUND, "게시글이 없습니다.");
+            }
+            else {
+                List<PostBatchSearchResponse> dataList = new ArrayList<>();
+                for(Post post: postList) {
+                    PostBatchSearchResponse data = PostBatchSearchResponse.toDto(post);
+                    data.setThumbnailUrl(FILE_BASE_URL+ "/files/post/"+post.getFiles().get(0).getThumbnailName());
+                    dataList.add(data);
+                }
+                response.setResponse(StatusCode.OK, "Success", dataList);
+            }
+
+        } catch (Exception e) {
+            log.warn("Exception during post batch search", e);
+            response.setResponse(StatusCode.SERVER_ERROR, "조회에 실패하였습니다");
         }
 
         return response;

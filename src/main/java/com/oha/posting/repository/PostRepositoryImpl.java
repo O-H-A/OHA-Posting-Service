@@ -12,6 +12,7 @@ import java.util.List;
 import static com.oha.posting.entity.QCommonCode.commonCode;
 import static com.oha.posting.entity.QLike.like;
 import static com.oha.posting.entity.QPost.post;
+import static com.oha.posting.entity.QPostFile.postFile;
 
 @RequiredArgsConstructor
 @Repository
@@ -31,6 +32,16 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
                 .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
                 .offset(offset)
                 .limit(size)
+                .fetch();
+    }
+
+    @Override
+    public List<Post> searchPostBatch(BooleanBuilder builder) {
+        return queryFactory
+                .selectFrom(post)
+                .join(post.category, commonCode).fetchJoin()
+                .leftJoin(post.files, postFile).fetchJoin()
+                .where(builder)
                 .fetch();
     }
 }

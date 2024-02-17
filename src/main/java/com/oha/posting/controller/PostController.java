@@ -1,10 +1,8 @@
 package com.oha.posting.controller;
 
 import com.oha.posting.config.response.ResponseObject;
-import com.oha.posting.dto.request.PostInsertRequest;
-import com.oha.posting.dto.request.PostLikeRequest;
-import com.oha.posting.dto.request.PostReportRequest;
-import com.oha.posting.dto.request.PostUpdateRequest;
+import com.oha.posting.dto.request.*;
+import com.oha.posting.dto.response.PostBatchSearchResponse;
 import com.oha.posting.dto.response.PostInsertResponse;
 import com.oha.posting.dto.response.PostSearchResponse;
 import com.oha.posting.service.PostService;
@@ -59,6 +57,12 @@ public class PostController {
                                                               , @RequestParam(name = "offset", defaultValue = "0") Integer offset
                                                               , @RequestParam(name = "size", defaultValue = "10") @Max(100) Integer size) {
         return postService.getPostList(token, regionCode, popular, categoryCode, offset, size);
+    }
+
+    @PostMapping("/posts/batch-search")
+    @Operation(summary = "게시글 일괄 조회")
+    public ResponseObject<List<PostBatchSearchResponse>> searchPostBatch(@RequestBody @Validated PostBatchSearchRequest dto) {
+        return postService.searchPostBatch(dto);
     }
 
     @PostMapping(value = "/post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
