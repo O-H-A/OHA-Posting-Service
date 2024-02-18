@@ -7,7 +7,9 @@ import com.oha.posting.config.response.StatusCode;
 import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.external.ExternalUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -17,16 +19,15 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class ExternalApiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final CacheService cacheService;
 
     @Value("${api.url}")
     private String baseUrl;
@@ -50,6 +51,7 @@ public class ExternalApiService {
                 new HttpEntity<>(headers),
                 String.class
         );
+        log.info("External api calL(GET): "+ builder.build().toUri());
 
         return objectMapper.readValue(response.getBody(), Map.class);
     }
@@ -66,10 +68,13 @@ public class ExternalApiService {
                 String.class
         );
 
+        log.info("External api call(POST): "+ baseUrl+uri);
+
         return objectMapper.readValue(response.getBody(), Map.class);
     }
 
     // 같은 격자의 행정구역 조회
+    @Cacheable(value = "location-nearby", key="#regionCode")
     public List<ExternalLocation> getLocationList(String token, Long regionCode) {
         try {
             Map<String, Object> responseBody = get(token, "/api/common/location/samegrid/"+regionCode);
@@ -102,6 +107,7 @@ public class ExternalApiService {
     }
 
     // 행정구역 조회
+    @Cacheable(value = "location-single", key="#regionCode")
     public ExternalLocation getLocation(String token, Long regionCode) {
         try {
             Map<String, Object> responseBody = get(token, "/api/common/location/getnamebycode/"+regionCode);
@@ -119,21 +125,27 @@ public class ExternalApiService {
 
     // user 리스트 조회
     public List<ExternalUser> getUserList(String token, Set<Long> userIds) {
-        try {
-            Map<String, Object> body = new HashMap<>();
-            body.put("userIds", userIds);
+        Set<Long> notCachedUserIds = new HashSet<>();
+        List<ExternalUser> cachedUserList = new ArrayList<>();
+        cacheService.getUserCacheInfo(userIds, notCachedUserIds, cachedUserList);
 
-            Map<String, Object> responseBody = post(token, "/api/user/specificUsers", body);
-            if (!Integer.valueOf(201).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-            }
-            else {
-                return objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
+        if (!notCachedUserIds.isEmpty()) {
+            try {
+                Map<String, Object> body = new HashMap<>();
+                body.put("userIds", userIds);
+
+                Map<String, Object> responseBody = post(token, "/api/user/specificUsers", body);
+                if (!Integer.valueOf(201).equals(responseBody.get("statusCode"))) {
+                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "사용자가 존재하지 않습니다.");
+                } else {
+                    List<ExternalUser> userList = objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
+                    cacheService.insertUserCache(userList);
+                    cachedUserList.addAll(userList);
+                }
+            } catch (Exception e) {
+                throw new InvalidDataException(StatusCode.BAD_REQUEST, "사용자가 존재하지 않습니다.");
             }
         }
-        catch (Exception e) {
-            throw new InvalidDataException(StatusCode.BAD_REQUEST,"사용자가 존재하지 않습니다.");
-        }
+        return cachedUserList;
     }
-
 }
