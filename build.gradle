@@ -63,6 +63,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-cache:3.1.0'
     implementation 'org.ehcache:ehcache:3.10.6'
     implementation 'javax.cache:cache-api:1.1.1'
+
+    implementation group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1' // To read XML config
+    implementation group: 'com.sun.xml.bind', name: 'jaxb-impl', version: '2.3.6' // To read XML config
 }
 
 tasks.named('test') {
