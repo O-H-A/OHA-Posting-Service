@@ -23,7 +23,7 @@ public class CacheService {
         CacheManager cacheManager = org.ehcache.config.builders.CacheManagerBuilder.newCacheManagerBuilder().build(true);
 
         ExpiryPolicy<Object, Object> expiryPolicy = ExpiryPolicyBuilder
-                .timeToLiveExpiration(Duration.ofSeconds(600));
+                .timeToLiveExpiration(Duration.ofSeconds(300));
 
         CacheConfiguration<Long, ExternalUser> cacheConfig = CacheConfigurationBuilder
                 .newCacheConfigurationBuilder(Long.class, ExternalUser.class, ResourcePoolsBuilder.heap(1000))

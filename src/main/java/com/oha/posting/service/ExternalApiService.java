@@ -1,84 +1,59 @@
 package com.oha.posting.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oha.posting.config.exception.InvalidDataException;
+import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.external.ExternalUser;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.*;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import java.io.IOException;
 import java.util.*;
 
-@RequiredArgsConstructor
 @Service
 @Slf4j
 public class ExternalApiService {
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
     private final CacheService cacheService;
+    private final WebClient webClient;
 
-    @Value("${api.url}")
-    private String baseUrl;
-
-    public Map<String, Object> get(String token, String uri) throws IOException {
-        return get(token, uri, new HashMap<>());
+    public ExternalApiService(CacheService cacheService, WebClient.Builder webClientBuilder, @Value("${api.url}") String baseUrl) {
+        this.cacheService = cacheService;
+        this.webClient = webClientBuilder.baseUrl(baseUrl).build();
     }
 
-    public Map<String, Object> get(String token, String uri, Map<String, Object> params) throws IOException {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", token);
-
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl + uri);
-        for (Map.Entry<String, Object> entry : params.entrySet()) {
-            builder.queryParam(entry.getKey(), entry.getValue());
-        }
-        log.info("External api calL(GET): "+ builder.build().toUri());
-        ResponseEntity<String> response = restTemplate.exchange(
-                builder.build().toUri(),
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                String.class
-        );
-
-        return objectMapper.readValue(response.getBody(), Map.class);
+    public <T> T get(String uri, String token, ParameterizedTypeReference<T> typeReference) {
+        log.info("External api call (GET): " + uri);
+        return webClient.get()
+                .uri(uri)
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .retrieve()
+                .bodyToMono(typeReference)
+                .block();
     }
-
-    public Map<String, Object> post(String token, String uri, Map<String, Object> body) throws IOException {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", token);
-
-        HttpEntity<Object> requestEntity = new HttpEntity<>(body, headers);
-        log.info("External api call(POST): "+ baseUrl+uri);
-        ResponseEntity<String> response = restTemplate.exchange(
-                baseUrl+uri,
-                HttpMethod.POST,
-                requestEntity,
-                String.class
-        );
-
-
-        return objectMapper.readValue(response.getBody(), Map.class);
+    public <T> T post(String uri, String token, Map<String, Object> body, ParameterizedTypeReference<T> typeReference) {
+        log.info("External api call (POST): " + uri);
+        return webClient.post()
+                .uri(uri)
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .body(BodyInserters.fromValue(body))
+                .retrieve()
+                .bodyToMono(typeReference)
+                .block();
     }
 
     // 같은 격자의 행정구역 조회
     @Cacheable(value = "location-nearby", key="#regionCode")
     public List<ExternalLocation> getLocationList(String token, Long regionCode) {
         try {
-            Map<String, Object> responseBody = get(token, "/api/common/location/samegrid/"+regionCode);
+            ParameterizedTypeReference<ResponseObject<List<ExternalLocation>>> typeReference = new ParameterizedTypeReference<>(){};
+            return get("/api/common/location/samegrid/"+regionCode, token, typeReference).getData();
 
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(HttpStatus.BAD_REQUEST,"위치 정보를 찾을 수 없습니다.");
-            } else {
-                return objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
-            }
         } catch (Exception e) {
             throw new InvalidDataException(HttpStatus.BAD_REQUEST,"위치 정보를 찾을 수 없습니다.");
         }
@@ -87,13 +62,9 @@ public class ExternalApiService {
     // 자주 가는 지역 리스트 조회
     public List<ExternalLocation> getUserLocationList(String token) {
         try {
-            Map<String, Object> responseBody = get(token, "/api/common/location/freqdistrict");
+            ParameterizedTypeReference<ResponseObject<List<ExternalLocation>>> typeReference = new ParameterizedTypeReference<>(){};
+            return get("/api/common/location/freqdistrict", token, typeReference).getData();
 
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(HttpStatus.BAD_REQUEST,"자주가는 위치 정보를 찾을 수 없습니다.");
-            } else {
-                return objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
-            }
         } catch (Exception e) {
             throw new InvalidDataException(HttpStatus.BAD_REQUEST,"자주가는 위치 정보를 찾을 수 없습니다.");
         }
@@ -103,13 +74,9 @@ public class ExternalApiService {
     @Cacheable(value = "location-single", key="#regionCode")
     public ExternalLocation getLocation(String token, Long regionCode) {
         try {
-            Map<String, Object> responseBody = get(token, "/api/common/location/getnamebycode/"+regionCode);
-            if (!Integer.valueOf(200).equals(responseBody.get("statusCode"))) {
-                throw new InvalidDataException(HttpStatus.BAD_REQUEST,"위치 정보를 찾을 수 없습니다.");
-            }
-            else {
-                return objectMapper.convertValue(responseBody.get("data"), ExternalLocation.class);
-            }
+            ParameterizedTypeReference<ResponseObject<ExternalLocation>> typeReference = new ParameterizedTypeReference<>(){};
+            return get("/api/common/location/getnamebycode/"+regionCode, token, typeReference).getData();
+
         } catch (Exception e) {
             throw new InvalidDataException(HttpStatus.BAD_REQUEST,"위치 정보를 찾을 수 없습니다.");
         }
@@ -124,16 +91,14 @@ public class ExternalApiService {
         if (!notCachedUserIds.isEmpty()) {
             try {
                 Map<String, Object> body = new HashMap<>();
-                body.put("userIds", userIds);
+                body.put("userIds", notCachedUserIds);
 
-                Map<String, Object> responseBody = post(token, "/api/user/specificUsers", body);
-                if (!Integer.valueOf(201).equals(responseBody.get("statusCode"))) {
-                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
-                } else {
-                    List<ExternalUser> userList = objectMapper.convertValue(responseBody.get("data"), new TypeReference<>() {});
-                    cacheService.insertUserCache(userList);
-                    cachedUserList.addAll(userList);
-                }
+                ParameterizedTypeReference<ResponseObject<List<ExternalUser>>> typeReference = new ParameterizedTypeReference<>(){};
+                List<ExternalUser> userList = post("/api/user/specificUsers", token, body, typeReference).getData();
+
+                cacheService.insertUserCache(userList);
+                cachedUserList.addAll(userList);
+
             } catch (Exception e) {
                 throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
             }

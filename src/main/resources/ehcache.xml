@@ -11,7 +11,7 @@
         <key-type>java.lang.Long</key-type>
         <value-type>com.oha.posting.dto.external.ExternalLocation</value-type>
         <expiry>
-            <ttl unit="hours">1</ttl>
+            <ttl unit="hours">24</ttl>
         </expiry>
         <listeners>
             <listener>
@@ -35,7 +35,7 @@
         <key-type>java.lang.Long</key-type>
         <value-type>java.util.List</value-type>
         <expiry>
-            <ttl unit="hours">1</ttl>
+            <ttl unit="hours">24</ttl>
         </expiry>
         <listeners>
             <listener>

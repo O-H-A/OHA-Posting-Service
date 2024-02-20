@@ -66,6 +66,9 @@ dependencies {
 
     implementation group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1' // To read XML config
     implementation group: 'com.sun.xml.bind', name: 'jaxb-impl', version: '2.3.6' // To read XML config
+
+    // web client
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
 }
 
 tasks.named('test') {
