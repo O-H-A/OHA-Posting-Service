@@ -4,7 +4,6 @@ import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.file.FileConfig;
 import com.oha.posting.config.file.FileUtil;
 import com.oha.posting.config.response.ResponseObject;
-import com.oha.posting.config.response.StatusCode;
 import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.external.ExternalUser;
 import com.oha.posting.dto.request.*;
@@ -17,10 +16,12 @@ import com.oha.posting.repository.LikeRepository;
 import com.oha.posting.repository.PostRepository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jcodec.api.JCodecException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,12 +50,12 @@ public class PostService {
     private String SAVE_PATH;
 
     @Transactional(readOnly = true)
-    public ResponseObject<PostSearchResponse> getPost(String token, Long postId) {
+    public ResponseObject<PostSearchResponse> getPost(String token, Long postId) throws Exception {
         ResponseObject<PostSearchResponse> response = new ResponseObject<>();
 
         try {
             Post post = postRepository.findByPostIdAndIsDel(postId, false)
-                    .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
             PostSearchResponse data = PostSearchResponse.toDto(post);
             for(PostFile file : post.getFiles()) {
@@ -73,22 +74,22 @@ public class PostService {
             ExternalLocation location = externalApiService.getLocation(token, post.getRegionCode());
             data.setLocationInfo(location);
 
-            response.setResponse(StatusCode.OK, "Success", data);
+            response.setResponse(HttpStatus.OK.value(), "Success", data);
         }
         catch (InvalidDataException e) {
             log.warn("Exception during post search", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during post search", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "조회에 실패하였습니다");
+            throw new Exception("게시물 조회에 실패하였습니다.");
         }
 
         return response;
     }
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<PostSearchResponse>> getPostList(String token, Long regionCode, Boolean popular, String categoryCode, Integer offset, Integer size) {
+    public ResponseObject<List<PostSearchResponse>> getPostList(String token, Long regionCode, Boolean popular, String categoryCode, Integer offset, Integer size) throws Exception {
         ResponseObject<List<PostSearchResponse>> response = new ResponseObject<>();
         List<PostSearchResponse> dataList = new ArrayList<>();
         try{
@@ -116,7 +117,7 @@ public class PostService {
             List<Post> postList = postRepository.searchPostList(builder, orderSpecifiers, offset, size);
 
             if(postList.isEmpty()) {
-                response.setResponse(StatusCode.NOT_FOUND, "게시글이 없습니다.");
+                throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
             }
             else {
                 Set<Long> userIds = new HashSet<>();
@@ -156,23 +157,23 @@ public class PostService {
                     dataList.add(data);
                 }
 
-                response.setResponse(StatusCode.OK, "Success", dataList);
+                response.setResponse(HttpStatus.OK.value(), "Success", dataList);
             }
         }
         catch (InvalidDataException e) {
             log.warn("Exception during post search", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during post search", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "조회에 실패하였습니다");
+            throw new Exception("게시물 조회에 실패하였습니다.");
         }
 
         return response;
     }
 
-    @Transactional
-    public ResponseObject<PostInsertResponse> insertPost(PostInsertRequest dto, List<MultipartFile> files, String token, Long userId) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<PostInsertResponse> insertPost(PostInsertRequest dto, List<MultipartFile> files, String token, Long userId, HttpServletResponse httpServletResponse) throws Exception {
         ResponseObject<PostInsertResponse> response = new ResponseObject<>();
         PostInsertResponse data = new PostInsertResponse();
         Post post = Post.toEntity(dto);
@@ -185,7 +186,7 @@ public class PostService {
 
             // category 조회
             CommonCode commonCode = commonCodeRepository.findByCode(dto.getCategoryCode())
-                    .orElseThrow(() ->  new InvalidDataException(StatusCode.BAD_REQUEST, "카테고리가 없습니다."));
+                    .orElseThrow(() ->  new InvalidDataException(HttpStatus.BAD_REQUEST, "카테고리가 없습니다."));
 
             post.setCategory(commonCode);
 
@@ -197,20 +198,21 @@ public class PostService {
 
             /* file */
             saveFiles(files, post);
-
             Post savedPost = postRepository.save(post);
             data.setPostId(savedPost.getPostId());
-            response.setResponse(StatusCode.CREATED, "Success", data);
+
+            response.setResponse(HttpStatus.CREATED.value(), "Success", data);
+            httpServletResponse.setStatus(HttpStatus.CREATED.value());
         }
         catch (InvalidDataException e) {
             log.warn("Exception during post create", e);
             rollbackFile(post.getFiles());
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during post create", e);
             rollbackFile(post.getFiles());
-            response.setResponse(StatusCode.SERVER_ERROR, "저장에 실패하였습니다");
+            throw new Exception("게시물 저장에 실패하였습니다.");
         }
 
         return response;
@@ -228,16 +230,16 @@ public class PostService {
         }
     }
 
-    @Transactional
-    public ResponseObject<?> updatePost(PostUpdateRequest dto, List<MultipartFile> files, String token, Long userId) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> updatePost(PostUpdateRequest dto, List<MultipartFile> files, String token, Long userId) throws Exception {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
             Post post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
-                    .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
             if (!userId.equals(post.getUserId())) {
-                throw new InvalidDataException(StatusCode.FORBIDDEN, "권한이 없습니다.");
+                throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
             }
 
             for(String item : dto.getUpdateItem().split(",")) {
@@ -247,7 +249,7 @@ public class PostService {
                         break;
                     case "categoryCode":
                         CommonCode commonCode = commonCodeRepository.findByCode(dto.getCategoryCode())
-                                .orElseThrow(() ->  new InvalidDataException(StatusCode.BAD_REQUEST, "카테고리가 없습니다."));
+                                .orElseThrow(() ->  new InvalidDataException(HttpStatus.BAD_REQUEST, "카테고리가 없습니다."));
 
                         post.setCategory(commonCode);
                         break;
@@ -267,27 +269,27 @@ public class PostService {
                         break;
                     case "files":
                         if (files == null) {
-                            throw new InvalidDataException(StatusCode.BAD_REQUEST,"파일을 선택해주세요.");
+                            throw new InvalidDataException(HttpStatus.BAD_REQUEST,"파일을 선택해주세요.");
                         }
                         rollbackFile(post.getFiles());
                         post.getFiles().clear();
                         saveFiles(files, post);
                         break;
                     default:
-                        throw new InvalidDataException(StatusCode.BAD_REQUEST, "일치하는 수정 항목이 없습니다.");
+                        throw new InvalidDataException(HttpStatus.BAD_REQUEST, "일치하는 수정 항목이 없습니다.");
                 }
             }
 
             post.setUpdDtm(new Timestamp(System.currentTimeMillis()));
-            response.setResponse(StatusCode.OK, "Success");
+            response.setResponse(HttpStatus.OK.value(), "Success");
         }
         catch (InvalidDataException e) {
             log.warn("Exception during post update", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during post update", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "저장에 실패하였습니다");
+            throw new Exception("게시물 수정에 실패하였습니다");
         }
 
         return response;
@@ -299,7 +301,7 @@ public class PostService {
             MultipartFile file = files.get(order);
 
             if(!fileConfig.isAllowedFile(file)) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST, "지원하지 않는 확장자입니다.");
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "지원하지 않는 확장자입니다.");
             }
 
             String extension = FileUtil.getFileExtension(file.getOriginalFilename());
@@ -317,107 +319,108 @@ public class PostService {
         }
     }
 
-    @Transactional
-    public ResponseObject<?> deletePost(Long postId, Long userId) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> deletePost(Long postId, Long userId) throws Exception {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
             Post post = postRepository.findByPostIdAndIsDel(postId, false)
-                    .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
             if (!userId.equals(post.getUserId())) {
-                throw new InvalidDataException(StatusCode.FORBIDDEN, "권한이 없습니다.");
+                throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
             }
 
             post.setIsDel(true);
             post.setDelDtm(new Timestamp(System.currentTimeMillis()));
             rollbackFile(post.getFiles());
 
-            response.setResponse(StatusCode.OK, "Success");
+            response.setResponse(HttpStatus.OK.value(), "Success");
         }
         catch (InvalidDataException e) {
             log.warn("Exception during post delete", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during post delete", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "삭제에 실패하였습니다");
+            throw new Exception("게시물 삭제에 실패하였습니다");
         }
 
         return response;
     }
 
-    @Transactional
-    public ResponseObject<?> like(Long userId, PostLikeRequest dto) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> like(Long userId, PostLikeRequest dto, HttpServletResponse httpServletResponse) throws Exception {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
             Post post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
-                    .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
             LikeId likeId = new LikeId(post.getPostId(), userId);
             Optional<Like> existingLike = likeRepository.findById(likeId);
 
             if ("L".equals(dto.getType())) {
                 if (existingLike.isPresent()) {
-                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "이미 좋아요 상태입니다.");
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "이미 좋아요 상태입니다.");
                 }
                 // 좋아요 등록
                 post.getLikes().add(new Like(new LikeId(dto.getPostId(), userId), post));
-                response.setResponse(StatusCode.CREATED, "Success");
+                response.setResponse(HttpStatus.CREATED.value(), "Success");
+                httpServletResponse.setStatus(HttpStatus.CREATED.value());
             } else {
                 if (existingLike.isEmpty()) {
-                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "좋아요 상태가 아닙니다.");
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "좋아요 상태가 아닙니다.");
                 }
                 // 좋아요 삭제
                 likeRepository.delete(existingLike.get());
-                response.setResponse(StatusCode.OK, "Success");
+                response.setResponse(HttpStatus.OK.value(), "Success");
             }
         } catch (InvalidDataException e) {
             log.warn("Exception during post like", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.warn("Exception during post like", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "좋아요에 실패하였습니다");
+            throw new Exception("게시물 좋아요에 실패하였습니다");
         }
 
         return response;
     }
 
-    @Transactional
-    public ResponseObject<?> reportPost(Long userId, PostReportRequest dto) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> reportPost(Long userId, PostReportRequest dto) throws Exception {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
             Post post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
-                    .orElseThrow(() -> new InvalidDataException(StatusCode.NOT_FOUND, "게시글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
             if(userId.equals(post.getUserId())) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST, "본인이 작성한 글은 신고하실 수 없습니다.");
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "본인이 작성한 글은 신고하실 수 없습니다.");
             }
             // 중복 신고 막기
             for (Report report : post.getReports()) {
                 if(userId.equals(report.getUserId())) {
-                    throw new InvalidDataException(StatusCode.BAD_REQUEST, "신고 내역이 있습니다.");
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "신고 내역이 있습니다.");
                 }
             }
 
             Report newReport = new Report(userId, dto.getContent(), post);
             post.getReports().add(newReport);
-            response.setResponse(StatusCode.CREATED, "Success");
+            response.setResponse(HttpStatus.CREATED.value(), "Success");
         } catch (InvalidDataException e) {
             log.warn("Exception during post report", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.warn("Exception during post report", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "신고에 실패하였습니다");
+            throw new Exception("게시물 신고에 실패하였습니다");
         }
 
         return response;
     }
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<PostBatchSearchResponse>> searchPostBatch(PostBatchSearchRequest dto) {
+    public ResponseObject<List<PostBatchSearchResponse>> searchPostBatch(PostBatchSearchRequest dto) throws Exception {
 
         ResponseObject<List<PostBatchSearchResponse>> response = new ResponseObject<>();
         try {
@@ -428,7 +431,7 @@ public class PostService {
             List<Post> postList = postRepository.searchPostBatch(builder);
 
             if(postList.isEmpty()) {
-                response.setResponse(StatusCode.NOT_FOUND, "게시글이 없습니다.");
+                throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
             }
             else {
                 List<PostBatchSearchResponse> dataList = new ArrayList<>();
@@ -437,12 +440,14 @@ public class PostService {
                     data.setThumbnailUrl(FILE_BASE_URL+ "/files/post/"+post.getFiles().get(0).getThumbnailName());
                     dataList.add(data);
                 }
-                response.setResponse(StatusCode.OK, "Success", dataList);
+                response.setResponse(HttpStatus.OK.value(), "Success", dataList);
             }
-
+        } catch (InvalidDataException e) {
+            log.warn("Exception during post batch search", e);
+            throw e;
         } catch (Exception e) {
             log.warn("Exception during post batch search", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "조회에 실패하였습니다");
+            throw new Exception("게시물 일괄 조회에 실패하였습니다");
         }
 
         return response;

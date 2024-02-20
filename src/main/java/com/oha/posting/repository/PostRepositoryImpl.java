@@ -24,7 +24,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         return queryFactory
                 .selectFrom(post)
                 .join(post.category, commonCode).fetchJoin()
-                .leftJoin(post.likes, like).fetchJoin()
+                .leftJoin(post.likes, like)
                 .leftJoin(post.keywords)
                 .leftJoin(post.files)
                 .where(builder)

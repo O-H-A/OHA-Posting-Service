@@ -8,8 +8,8 @@ import lombok.Data;
 @Data
 public class PostReportRequest {
 
-    @Schema(description = "게시글 ID", example = "1")
-    @NotNull(message = "게시글 ID는 필수 항목입니다.")
+    @Schema(description = "게시물 ID", example = "1")
+    @NotNull(message = "게시물 ID는 필수 항목입니다.")
     private Long postId;
 
     @Schema(description = "신고 사유", example = "신고합니다")

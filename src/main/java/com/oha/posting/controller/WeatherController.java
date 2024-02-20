@@ -9,6 +9,7 @@ import com.oha.posting.service.WeatherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public class WeatherController {
                                                      - 500: 서버 오류
                                                      """)
     public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
-                                                                          , @RequestParam(name = "regionCode") Long regionCode) {
+                                                                          , @RequestParam(name = "regionCode") Long regionCode) throws Exception {
         return weatherService.getWeatherCount(token, regionCode);
     }
 
@@ -39,13 +40,14 @@ public class WeatherController {
                                                      **Status Code:**
                                                      - `201`: 성공
                                                      - 400: 데이터 오류
-                                                     - 404: 게시글 없음
+                                                     - 404: 게시물 없음
                                                      - 500: 서버 오류\n
                                                      """)
     public ResponseObject<WeatherInsertResponse> insertWeather(@RequestBody @Validated WeatherInsertRequest dto
                                                              , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
-                                                             , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) {
-        return weatherService.insertWeather(dto, token, userId);
+                                                             , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
+                                                             , HttpServletResponse httpServletResponse) throws Exception {
+        return weatherService.insertWeather(dto, token, userId, httpServletResponse);
     }
 
     @PutMapping("/weather")
@@ -54,12 +56,12 @@ public class WeatherController {
                                                      - 200: 성공
                                                      - 400: 데이터 오류
                                                      - 403: 권한 없음
-                                                     - 404: 게시글 없음
+                                                     - 404: 게시물 없음
                                                      - 500: 서버 오류\n
                                                      """)
     public ResponseObject<?> updateWeather(@RequestBody @Validated WeatherUpdateRequest dto
                                          , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
-                                         , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token) {
+                                         , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token) throws Exception {
         return weatherService.updateWeather(dto, userId, token);
     }
 
@@ -70,11 +72,11 @@ public class WeatherController {
                                                      - 200: 성공
                                                      - 400: 데이터 오류
                                                      - 403: 권한 없음
-                                                     - 404: 게시글 없음
+                                                     - 404: 게시물 없음
                                                      - 500: 서버 오류
                                                      """)
     public ResponseObject<?> deleteWeather(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
-                                         , @PathVariable Long weatherId) {
+                                         , @PathVariable Long weatherId) throws Exception {
         return weatherService.deleteWeather(userId, weatherId);
     }
 }

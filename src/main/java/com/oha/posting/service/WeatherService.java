@@ -2,7 +2,6 @@ package com.oha.posting.service;
 
 import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.response.ResponseObject;
-import com.oha.posting.config.response.StatusCode;
 import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.request.WeatherInsertRequest;
 import com.oha.posting.dto.request.WeatherUpdateRequest;
@@ -12,8 +11,10 @@ import com.oha.posting.entity.CommonCode;
 import com.oha.posting.entity.Weather;
 import com.oha.posting.repository.CommonCodeRepository;
 import com.oha.posting.repository.WeatherRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,7 @@ public class WeatherService {
     private final ExternalApiService externalApiService;
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(String token, Long regionCode) {
+    public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(String token, Long regionCode) throws Exception {
         ResponseObject<List<WeatherCountSearchResponse>> response = new ResponseObject<>();
         try{
             int dayParts = getDayParts();
@@ -45,20 +46,20 @@ public class WeatherService {
 
             List<WeatherCountSearchResponse> data = weatherRepository.searchWeatherCount(regionCodes, dayParts, currentDate);
 
-            response.setResponse(StatusCode.OK, "Success", data);
+            response.setResponse(HttpStatus.OK.value(), "Success", data);
         } catch (InvalidDataException e) {
             log.warn("Exception during weather count search", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.warn("Exception during weather count search", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "조회에 실패하였습니다");
+            throw new Exception("동네 날씨 조회에 실패하였습니다");
         }
 
         return response;
     }
 
-    @Transactional
-    public ResponseObject<WeatherInsertResponse> insertWeather(WeatherInsertRequest dto, String token, Long userId) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<WeatherInsertResponse> insertWeather(WeatherInsertRequest dto, String token, Long userId, HttpServletResponse httpServletResponse) throws Exception {
         ResponseObject<WeatherInsertResponse> response = new ResponseObject<>();
 
         try{
@@ -69,18 +70,18 @@ public class WeatherService {
             // 중복 조회 (같은 시간대 등록된 동네 날씨 확인)
             if (weatherRepository.findByUserIdAndDayPartsAndWeatherDt(userId, dayParts, currentDate)
                     .isPresent()) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST, "날씨는 한 번만 등록하실 수 있습니다.");
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨는 한 번만 등록하실 수 있습니다.");
             }
 
             // 날씨 공통코드 확인
             CommonCode commonCode = commonCodeRepository.findByCode(dto.getWeatherCode())
-                    .orElseThrow(() ->  new InvalidDataException(StatusCode.BAD_REQUEST, "날씨 유형이 없습니다."));
+                    .orElseThrow(() ->  new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨 유형이 없습니다."));
             weather.setWeatherCommonCode(commonCode);
 
             // 사용자 자주 가는 지역 확인
             List<ExternalLocation> userLocationList = externalApiService.getUserLocationList(token);
             if(userLocationList.stream().noneMatch(item -> dto.getRegionCode().toString().equals(item.getCode()))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST, "자주 가는 지역이 아닙니다.");
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "자주 가는 지역이 아닙니다.");
             }
 
             weather.setRegionCode(dto.getRegionCode());
@@ -95,15 +96,16 @@ public class WeatherService {
 
             // DB 저장
             Weather savedWeather = weatherRepository.save(weather);
-            response.setResponse(StatusCode.CREATED, "Success", new WeatherInsertResponse(savedWeather.getWeatherId()));
+            response.setResponse(HttpStatus.CREATED.value(), "Success", new WeatherInsertResponse(savedWeather.getWeatherId()));
+            httpServletResponse.setStatus(HttpStatus.CREATED.value());
 
         } catch (InvalidDataException e) {
             log.warn("Exception during weather insert", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during weather insert", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "저장에 실패하였습니다");
+            throw new Exception("동네 날씨 저장에 실패하였습니다");
         }
 
         return response;
@@ -127,68 +129,69 @@ public class WeatherService {
         }
     }
 
-    @Transactional
-    public ResponseObject<?> updateWeather(WeatherUpdateRequest dto, Long userId, String token) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> updateWeather(WeatherUpdateRequest dto, Long userId, String token) throws Exception {
         ResponseObject<?> response = new ResponseObject<>();
 
         try {
             // 동네 날씨 조회
             Weather weather = weatherRepository.findById(dto.getWeatherId()).orElseThrow(
-                    () -> new InvalidDataException(StatusCode.BAD_REQUEST, "날씨 정보가 없습니다."));
+                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨 정보가 없습니다."));
 
             // 본인 확인
             if(!userId.equals(weather.getUserId())) {
-                throw new InvalidDataException(StatusCode.FORBIDDEN, "권한이 없습니다.");
+                throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
             }
 
             // 사용자 자주 가는 지역 확인
             List<ExternalLocation> userLocationList = externalApiService.getUserLocationList(token);
             if(userLocationList.stream().noneMatch(item -> dto.getRegionCode().toString().equals(item.getCode()))) {
-                throw new InvalidDataException(StatusCode.BAD_REQUEST, "자주 가는 지역이 아닙니다.");
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "자주 가는 지역이 아닙니다.");
             }
             weather.setRegionCode(dto.getRegionCode());
 
             // 날씨 공통코드 확인
             CommonCode commonCode = commonCodeRepository.findByCode(dto.getWeatherCode())
-                    .orElseThrow(() ->  new InvalidDataException(StatusCode.BAD_REQUEST, "날씨 유형이 없습니다."));
+                    .orElseThrow(() ->  new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨 유형이 없습니다."));
             weather.setWeatherCommonCode(commonCode);
 
-            response.setResponse(StatusCode.OK, "Success");
+            response.setResponse(HttpStatus.OK.value(), "Success");
         } catch (InvalidDataException e) {
             log.warn("Exception during weather update", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during weather update", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "저장에 실패하였습니다");
+            throw new Exception("동네 날씨 수정에 실패하였습니다");
         }
 
         return response;
     }
 
-    public ResponseObject<?> deleteWeather(Long userId, Long weatherId) {
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> deleteWeather(Long userId, Long weatherId) throws Exception {
         ResponseObject<?> response = new ResponseObject<>();
 
         try{
             // 동네 날씨 조회
             Weather weather = weatherRepository.findById(weatherId).orElseThrow(
-                    () -> new InvalidDataException(StatusCode.BAD_REQUEST, "날씨 정보가 없습니다."));
+                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨 정보가 없습니다."));
 
             // 본인 확인
             if(!userId.equals(weather.getUserId())) {
-                throw new InvalidDataException(StatusCode.FORBIDDEN, "권한이 없습니다.");
+                throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
             }
 
             // 삭제
             weatherRepository.delete(weather);
-            response.setResponse(StatusCode.OK, "Success");
+            response.setResponse(HttpStatus.OK.value(), "Success");
         } catch (InvalidDataException e) {
             log.warn("Exception during weather delete", e);
-            response.setResponse(e.getStatusCode(), e.getMessage());
+            throw e;
         }
         catch (Exception e) {
             log.warn("Exception during weather delete", e);
-            response.setResponse(StatusCode.SERVER_ERROR, "삭제에 실패하였습니다");
+            throw new Exception("삭제에 실패하였습니다");
         }
 
         return response;
