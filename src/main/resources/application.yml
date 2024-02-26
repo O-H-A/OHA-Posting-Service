@@ -31,6 +31,15 @@ spring:
     jcache:
       config: classpath:ehcache.xml
 
+  kafka:
+    bootstrap-servers: ${KAFKA_HOST}:${KAFKA_PORT}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  mvc:
+    log-resolved-exception: false
+
 springdoc:
   swagger-ui:
     path: /api/posting/swagger-ui
@@ -44,5 +53,5 @@ api:
   url: ${GATEWAY_URL}
 
 file:
-  base-url: ${FILE_SERVER}
+  base-url: ${GATEWAY_URL}
   save-path: /home/upload/

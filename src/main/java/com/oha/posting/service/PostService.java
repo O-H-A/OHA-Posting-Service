@@ -368,6 +368,11 @@ public class PostService {
                 post.getLikes().add(new Like(new LikeId(dto.getPostId(), userId), post));
                 response.setResponse(HttpStatus.CREATED.value(), "Success");
                 httpServletResponse.setStatus(HttpStatus.CREATED.value());
+
+                if(!post.getUserId().equals(userId)) {
+                    String mediaType = getMediaType(post.getFiles());
+                    kafkaProducer.sendPostLikeEvent(new PostLikeEvent(post.getPostId(), post.getUserId(), userId, mediaType));
+                }
             } else {
                 if (existingLike.isEmpty()) {
                     throw new InvalidDataException(HttpStatus.BAD_REQUEST, "좋아요 상태가 아닙니다.");

@@ -21,4 +21,8 @@ public class FileUtil {
     public static boolean isVideo(MultipartFile multipartFile) {
         return List.of("mp4", "mov").contains(getFileExtension(multipartFile.getOriginalFilename()));
     }
+
+    public static boolean isVideo(String fileName) {
+        return List.of("mp4", "mov").contains(getFileExtension(fileName));
+    }
 }
