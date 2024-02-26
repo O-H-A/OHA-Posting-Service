@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -57,6 +58,11 @@ public class ExternalApiService {
         } catch (Exception e) {
             throw new InvalidDataException(HttpStatus.BAD_REQUEST,"위치 정보를 찾을 수 없습니다.");
         }
+    }
+
+    public Map<String, ExternalLocation> getLocationMap(String token, Long regionCode) {
+        List<ExternalLocation> locationList = getLocationList(token, regionCode);
+        return locationList.stream().collect(Collectors.toMap(ExternalLocation::getCode, location -> location));
     }
 
     // 자주 가는 지역 리스트 조회
@@ -104,5 +110,11 @@ public class ExternalApiService {
             }
         }
         return cachedUserList;
+    }
+
+
+    public Map<Long, ExternalUser> getUserMap(String token, Set<Long> userIds) {
+        List<ExternalUser> userList = getUserList(token, userIds);
+        return userList.stream().collect(Collectors.toMap(ExternalUser::getUserId, user -> user));
     }
 }

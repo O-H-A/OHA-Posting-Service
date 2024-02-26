@@ -1,4 +1,4 @@
-package com.oha.posting.dto.response;
+package com.oha.posting.dto.weather;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;

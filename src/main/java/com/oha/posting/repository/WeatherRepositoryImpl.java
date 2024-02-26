@@ -1,13 +1,16 @@
 package com.oha.posting.repository;
 
-import com.oha.posting.dto.response.WeatherCountSearchResponse;
+import com.oha.posting.dto.weather.WeatherCountSearchResponse;
+import com.oha.posting.dto.weather.WeatherSearchResponse;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static com.oha.posting.entity.QCommonCode.commonCode;
 import static com.oha.posting.entity.QWeather.weather;
@@ -36,5 +39,28 @@ public class WeatherRepositoryImpl implements WeatherRepositoryCustom {
                 .groupBy(commonCode.code)
                 .orderBy(weather.weatherCommonCode.count().desc())
                 .fetch();
+    }
+
+    @Override
+    public Optional<WeatherSearchResponse> searchWeather(Long userId, Long regionCode, int dayParts, Date currentDate) {
+        WeatherSearchResponse result = queryFactory
+                .select(Projections.constructor(WeatherSearchResponse.class
+                        , weather.weatherId
+                        , weather.userId
+                        , weather.regionCode
+                        , commonCode.code
+                        , commonCode.codeName
+                        , weather.dayParts
+                        , Expressions.stringTemplate("TO_CHAR({0}, {1})",weather.weatherDt, "YYYY-MM-DD")
+                ))
+                .from(weather)
+                .innerJoin(commonCode)
+                .on(weather.weatherCommonCode.code.eq(commonCode.code))
+                .where(weather.userId.eq(userId), weather.regionCode.eq(regionCode)
+                        , weather.dayParts.eq(dayParts), weather.weatherDt.eq(currentDate))
+                .fetch()
+                .get(0);
+
+        return Optional.ofNullable(result);
     }
 }

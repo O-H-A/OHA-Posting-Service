@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 import static com.oha.posting.entity.QCommonCode.commonCode;
-import static com.oha.posting.entity.QLike.like;
 import static com.oha.posting.entity.QPost.post;
 import static com.oha.posting.entity.QPostFile.postFile;
 
@@ -24,11 +23,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         return queryFactory
                 .selectFrom(post)
                 .join(post.category, commonCode).fetchJoin()
-                .leftJoin(post.likes, like)
-                .leftJoin(post.keywords)
-                .leftJoin(post.files)
                 .where(builder)
-                .groupBy(post.postId, like.likeId.postId, like.likeId.userId, commonCode.code)
                 .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
                 .offset(offset)
                 .limit(size)

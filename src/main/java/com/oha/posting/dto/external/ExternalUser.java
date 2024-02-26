@@ -8,4 +8,5 @@ import lombok.NoArgsConstructor;
 public class ExternalUser {
         private Long userId;
         private String name;
+        private String profileUrl;
 }

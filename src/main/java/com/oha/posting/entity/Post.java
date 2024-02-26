@@ -1,6 +1,6 @@
 package com.oha.posting.entity;
 
-import com.oha.posting.dto.request.PostInsertRequest;
+import com.oha.posting.dto.post.PostInsertRequest;
 import jakarta.persistence.*;
 import lombok.Data;
 

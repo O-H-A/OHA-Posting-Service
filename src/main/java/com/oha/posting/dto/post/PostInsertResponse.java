@@ -1,4 +1,4 @@
-package com.oha.posting.dto.response;
+package com.oha.posting.dto.post;
 
 import lombok.Data;
 

@@ -1,10 +1,11 @@
 package com.oha.posting.controller;
 
 import com.oha.posting.config.response.ResponseObject;
-import com.oha.posting.dto.request.WeatherInsertRequest;
-import com.oha.posting.dto.request.WeatherUpdateRequest;
-import com.oha.posting.dto.response.WeatherCountSearchResponse;
-import com.oha.posting.dto.response.WeatherInsertResponse;
+import com.oha.posting.dto.weather.WeatherInsertRequest;
+import com.oha.posting.dto.weather.WeatherUpdateRequest;
+import com.oha.posting.dto.weather.WeatherCountSearchResponse;
+import com.oha.posting.dto.weather.WeatherInsertResponse;
+import com.oha.posting.dto.weather.WeatherSearchResponse;
 import com.oha.posting.service.WeatherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,6 +34,17 @@ public class WeatherController {
     public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
                                                                           , @RequestParam(name = "regionCode") Long regionCode) throws Exception {
         return weatherService.getWeatherCount(token, regionCode);
+    }
+
+    @GetMapping ("/weather/my")
+    @Operation(summary = "등록한 동네 날씨 조회", description = """
+                                                     **Status Code:**
+                                                     - 200: 성공
+                                                     - 500: 서버 오류
+                                                     """)
+    public ResponseObject<WeatherSearchResponse> getMyWeather(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
+                                                                 , @RequestParam(name = "regionCode") Long regionCode) throws Exception {
+        return weatherService.getMyWeather(userId, regionCode);
     }
 
     @PostMapping("/weather")

@@ -1,4 +1,4 @@
-package com.oha.posting.dto.response;
+package com.oha.posting.dto.post;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -69,6 +69,9 @@ public class PostSearchResponse {
 
     @Schema(description = "파일URL")
     private List<PostSearchFile> files = new ArrayList<>();
+
+    @Schema(description = "프로필 이미지 URL")
+    private String profileUrl;
 
     public static PostSearchResponse toDto(Post post) {
         PostSearchResponse response = new PostSearchResponse();

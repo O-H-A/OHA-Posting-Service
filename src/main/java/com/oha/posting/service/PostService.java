@@ -6,10 +6,11 @@ import com.oha.posting.config.file.FileUtil;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.external.ExternalUser;
-import com.oha.posting.dto.request.*;
-import com.oha.posting.dto.response.PostBatchSearchResponse;
-import com.oha.posting.dto.response.PostInsertResponse;
-import com.oha.posting.dto.response.PostSearchResponse;
+import com.oha.posting.dto.kafka.PostLikeEvent;
+import com.oha.posting.dto.post.*;
+import com.oha.posting.dto.post.PostBatchSearchResponse;
+import com.oha.posting.dto.post.PostInsertResponse;
+import com.oha.posting.dto.post.PostSearchResponse;
 import com.oha.posting.entity.*;
 import com.oha.posting.repository.CommonCodeRepository;
 import com.oha.posting.repository.LikeRepository;
@@ -42,6 +43,7 @@ public class PostService {
     private final LikeRepository likeRepository;
     private final FileConfig fileConfig;
     private final FileService fileService;
+    private final KafkaProducer kafkaProducer;
 
     @Value("${file.base-url}")
     private String FILE_BASE_URL;
@@ -67,8 +69,13 @@ public class PostService {
             }
 
             // db 유저 정보 (user 서비스)
-            List<ExternalUser> userList = externalApiService.getUserList(token, Set.of(post.getUserId()));
-            data.setUserNickname(userList.get(0).getName());
+            Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, Set.of(post.getUserId()));
+            if (userMap.size() != 1) {
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
+            }
+
+            data.setUserNickname(userMap.get(post.getUserId()).getName());
+            data.setProfileUrl(userMap.get(post.getUserId()).getProfileUrl());
 
             // 행정구역코드로 위치 조회 API 호출
             ExternalLocation location = externalApiService.getLocation(token, post.getRegionCode());
@@ -94,9 +101,9 @@ public class PostService {
         List<PostSearchResponse> dataList = new ArrayList<>();
         try{
             // 행정구역코드로 위치 조회 API 호출
-            List<ExternalLocation> locationList = externalApiService.getLocationList(token, regionCode);
+            Map<String, ExternalLocation> locationMap = externalApiService.getLocationMap(token, regionCode);
             // 주변 동네 포함
-            List<Long> regionCodes = locationList.stream().map(item -> Long.parseLong(item.getCode())).toList();
+            List<Long> regionCodes = (locationMap.keySet()).stream().map(item -> Long.parseLong(item)).toList();
 
             QPost qPost = QPost.post;
 
@@ -126,7 +133,11 @@ public class PostService {
                 }
 
 //              user 리스트 조회
-                List<ExternalUser> userList = externalApiService.getUserList(token, userIds);
+                Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
+                if (userMap.size() != userIds.size()) {
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
+                }
+
                 for(Post post: postList) {
                     PostSearchResponse data = PostSearchResponse.toDto(post);
 
@@ -139,20 +150,13 @@ public class PostService {
                     }
 
                     // user 정보 매핑
-                    for(ExternalUser user: userList) {
-                        if (post.getUserId().equals(user.getUserId())) {
-                            data.setUserNickname(user.getName());
-                            break;
-                        }
-                    }
+                    ExternalUser user = userMap.get(post.getUserId());
+                    data.setUserNickname(user.getName());
+                    data.setProfileUrl(user.getProfileUrl());
 
                     // 위치 정보 매핑
-                    for (ExternalLocation location : locationList) {
-                        if (post.getRegionCode().toString().equals(location.getCode())) {
-                            data.setLocationInfo(location);
-                            break;
-                        }
-                    }
+                    ExternalLocation location = locationMap.get(post.getRegionCode().toString());
+                    data.setLocationInfo(location);
 
                     dataList.add(data);
                 }
@@ -261,7 +265,7 @@ public class PostService {
                         break;
                     case "regionCode":
                         // 행정구역코드로 위치 조회 API 호출
-                        externalApiService.getLocation(token, post.getRegionCode());
+                        externalApiService.getLocation(token, dto.getRegionCode());
                         post.setRegionCode(dto.getRegionCode());
                         break;
                     case "locationDetail":
@@ -362,7 +366,7 @@ public class PostService {
 
             if ("L".equals(dto.getType())) {
                 if (existingLike.isPresent()) {
-                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "이미 좋아요 상태입니다.");
+                    throw new InvalidDataException(HttpStatus.CONFLICT, "이미 좋아요 상태입니다.");
                 }
                 // 좋아요 등록
                 post.getLikes().add(new Like(new LikeId(dto.getPostId(), userId), post));
@@ -406,7 +410,7 @@ public class PostService {
             // 중복 신고 막기
             for (Report report : post.getReports()) {
                 if(userId.equals(report.getUserId())) {
-                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "신고 내역이 있습니다.");
+                    throw new InvalidDataException(HttpStatus.CONFLICT, "신고 내역이 있습니다.");
                 }
             }
 
@@ -443,6 +447,7 @@ public class PostService {
                 for(Post post: postList) {
                     PostBatchSearchResponse data = PostBatchSearchResponse.toDto(post);
                     data.setThumbnailUrl(FILE_BASE_URL+ "/files/post/"+post.getFiles().get(0).getThumbnailName());
+                    data.setMediaType(getMediaType(post.getFiles()));
                     dataList.add(data);
                 }
                 response.setResponse(HttpStatus.OK.value(), "Success", dataList);
@@ -456,5 +461,13 @@ public class PostService {
         }
 
         return response;
+    }
+
+    private String getMediaType(List<PostFile> fileList) {
+        if(!fileList.isEmpty()) {
+            return FileUtil.isVideo(fileList.get(0).getFileName()) ? "동영상" : "사진";
+        }
+        else
+            return null;
     }
 }

@@ -1,10 +1,10 @@
 package com.oha.posting.controller;
 
 import com.oha.posting.config.response.ResponseObject;
-import com.oha.posting.dto.request.*;
-import com.oha.posting.dto.response.PostBatchSearchResponse;
-import com.oha.posting.dto.response.PostInsertResponse;
-import com.oha.posting.dto.response.PostSearchResponse;
+import com.oha.posting.dto.post.*;
+import com.oha.posting.dto.post.PostBatchSearchResponse;
+import com.oha.posting.dto.post.PostInsertResponse;
+import com.oha.posting.dto.post.PostSearchResponse;
 import com.oha.posting.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

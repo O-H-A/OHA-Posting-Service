@@ -3,10 +3,11 @@ package com.oha.posting.service;
 import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.dto.external.ExternalLocation;
-import com.oha.posting.dto.request.WeatherInsertRequest;
-import com.oha.posting.dto.request.WeatherUpdateRequest;
-import com.oha.posting.dto.response.WeatherCountSearchResponse;
-import com.oha.posting.dto.response.WeatherInsertResponse;
+import com.oha.posting.dto.weather.WeatherInsertRequest;
+import com.oha.posting.dto.weather.WeatherUpdateRequest;
+import com.oha.posting.dto.weather.WeatherCountSearchResponse;
+import com.oha.posting.dto.weather.WeatherInsertResponse;
+import com.oha.posting.dto.weather.WeatherSearchResponse;
 import com.oha.posting.entity.CommonCode;
 import com.oha.posting.entity.Weather;
 import com.oha.posting.repository.CommonCodeRepository;
@@ -22,6 +23,7 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -40,9 +42,10 @@ public class WeatherService {
             Date currentDate = Date.valueOf(LocalDate.now());
 
             // 행정구역코드로 위치 조회 API 호출
-            List<ExternalLocation> locationList = externalApiService.getLocationList(token, regionCode);
+            Map<String, ExternalLocation> locationMap = externalApiService.getLocationMap(token, regionCode);
+
             // 주변 동네 포함
-            List<Long> regionCodes = locationList.stream().map(item -> Long.parseLong(item.getCode())).toList();
+            List<Long> regionCodes = (locationMap.keySet()).stream().map(item -> Long.parseLong(item)).toList();
 
             List<WeatherCountSearchResponse> data = weatherRepository.searchWeatherCount(regionCodes, dayParts, currentDate);
 
@@ -70,7 +73,7 @@ public class WeatherService {
             // 중복 조회 (같은 시간대 등록된 동네 날씨 확인)
             if (weatherRepository.findByUserIdAndDayPartsAndWeatherDt(userId, dayParts, currentDate)
                     .isPresent()) {
-                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨는 한 번만 등록하실 수 있습니다.");
+                throw new InvalidDataException(HttpStatus.CONFLICT, "날씨는 한 번만 등록하실 수 있습니다.");
             }
 
             // 날씨 공통코드 확인
@@ -136,7 +139,7 @@ public class WeatherService {
         try {
             // 동네 날씨 조회
             Weather weather = weatherRepository.findById(dto.getWeatherId()).orElseThrow(
-                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨 정보가 없습니다."));
+                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "등록한 날씨 정보가 없습니다."));
 
             // 본인 확인
             if(!userId.equals(weather.getUserId())) {
@@ -175,7 +178,7 @@ public class WeatherService {
         try{
             // 동네 날씨 조회
             Weather weather = weatherRepository.findById(weatherId).orElseThrow(
-                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "날씨 정보가 없습니다."));
+                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "등록한 날씨 정보가 없습니다."));
 
             // 본인 확인
             if(!userId.equals(weather.getUserId())) {
@@ -192,6 +195,28 @@ public class WeatherService {
         catch (Exception e) {
             log.warn("Exception during weather delete", e);
             throw new Exception("삭제에 실패하였습니다");
+        }
+
+        return response;
+    }
+
+    public ResponseObject<WeatherSearchResponse> getMyWeather(Long userId, Long regionCode) throws Exception {
+        ResponseObject<WeatherSearchResponse> response = new ResponseObject<>();
+
+        try{
+            int dayParts = getDayParts();
+            Date currentDate = Date.valueOf(LocalDate.now());
+
+            WeatherSearchResponse data = weatherRepository.searchWeather(userId, regionCode, dayParts, currentDate)
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "등록한 날씨 정보가 없습니다."));
+
+            response.setResponse(HttpStatus.OK.value(), "Success", data);
+        } catch (InvalidDataException e) {
+            log.warn("Exception during weather count search", e);
+            throw e;
+        } catch (Exception e) {
+            log.warn("Exception during weather count search", e);
+            throw new Exception("동네 날씨 조회에 실패하였습니다");
         }
 
         return response;

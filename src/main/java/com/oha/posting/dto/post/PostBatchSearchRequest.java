@@ -1,4 +1,4 @@
-package com.oha.posting.dto.request;
+package com.oha.posting.dto.post;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
