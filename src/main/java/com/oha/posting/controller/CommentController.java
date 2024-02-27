@@ -1,9 +1,7 @@
 package com.oha.posting.controller;
 
 import com.oha.posting.config.response.ResponseObject;
-import com.oha.posting.dto.comment.CommentInsertRequest;
-import com.oha.posting.dto.comment.CommentInsertResponse;
-import com.oha.posting.dto.comment.CommentSearchResponse;
+import com.oha.posting.dto.comment.*;
 import com.oha.posting.service.CommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,8 +22,8 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    @GetMapping("/comments")
-    @Operation(summary = "댓글 리스트 조회", description = """
+    @GetMapping("/post/comments")
+    @Operation(summary = "게시물 댓글 리스트 조회", description = """
                                                           **statusCode:**
                                                           - 200: 성공
                                                           - 400: 데이터 오류
@@ -43,8 +41,8 @@ public class CommentController {
     }
 
 
-    @PostMapping(value = "/comment")
-    @Operation(summary = "댓글 작성", description = """ 
+    @PostMapping(value = "/post/comment")
+    @Operation(summary = "게시물 댓글 작성", description = """ 
                                                     **Status Code:**
                                                     - `201`: 성공
                                                     - 400: 데이터 오류
@@ -57,4 +55,30 @@ public class CommentController {
         return commentService.insertComment(dto, token, userId, httpServletResponse);
     }
 
+    @PutMapping(value = "/post/comment")
+    @Operation(summary = "게시물 댓글 수정", description = """ 
+                                                    **Status Code:**
+                                                    - 200: 성공
+                                                    - 400: 데이터 오류
+                                                    - 403: 권한 오류
+                                                    - 500: 서버 오류
+                                                    """)
+    public ResponseObject<CommentUpdateResponse> updateComment(@RequestBody @Validated CommentUpdateRequest dto
+                                                             , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
+                                                             , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
+        return commentService.updateComment(dto, token, userId);
+    }
+
+    @DeleteMapping(value = "/post/comment/{commentId}")
+    @Operation(summary = "게시물 댓글 삭제", description = """ 
+                                                    **Status Code:**
+                                                    - 200: 성공
+                                                    - 400: 데이터 오류
+                                                    - 403: 권한 오류
+                                                    - 500: 서버 오류
+                                                    """)
+    public ResponseObject<?> deleteComment(@PathVariable(value = "commentId") Long commentId
+                                         , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
+        return commentService.deleteComment(commentId, userId);
+    }
 }

@@ -7,14 +7,11 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class CommentInsertRequest {
+public class CommentUpdateRequest {
 
-    @Schema(description = "게시물 ID", example = "1")
+    @Schema(description = "댓글 ID", example = "1")
     @NotNull
-    private Long postId;
-
-    @Schema(description = "부모 댓글 ID", example = "1")
-    private Long parentId;
+    private Long commentId;
 
     @Schema(description = "댓글 내용", example = "댓글 내용")
     @Size(min = 1, max = 300, message = "댓글은 최대 300자까지 입력 가능합니다.")

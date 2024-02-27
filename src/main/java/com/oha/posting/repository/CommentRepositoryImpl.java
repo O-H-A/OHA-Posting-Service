@@ -25,11 +25,13 @@ public class CommentRepositoryImpl implements CommentRepositoryCustom {
         return queryFactory
                 .select(Projections.constructor(CommentSearchResponse.class
                         , comment.commentId
+                        , comment.parent.commentId
                         , comment.post.postId
                         , comment.content
                         , comment.userId
                         , comment.taggedUserId
                         , comment.regDtm
+                        , comment.updDtm
                         , childComment.count()
                 ))
                 .from(comment)

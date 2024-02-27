@@ -2,9 +2,7 @@ package com.oha.posting.service;
 
 import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.response.ResponseObject;
-import com.oha.posting.dto.comment.CommentInsertRequest;
-import com.oha.posting.dto.comment.CommentInsertResponse;
-import com.oha.posting.dto.comment.CommentSearchResponse;
+import com.oha.posting.dto.comment.*;
 import com.oha.posting.dto.external.ExternalUser;
 import com.oha.posting.entity.Comment;
 import com.oha.posting.entity.Post;
@@ -20,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -169,4 +168,87 @@ public class CommentService {
         return response;
     }
 
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<CommentUpdateResponse> updateComment(CommentUpdateRequest dto, String token, Long userId) throws Exception {
+        ResponseObject<CommentUpdateResponse> response = new ResponseObject<>();
+
+        try{
+            Comment comment = commentRepository.findByCommentIdAndIsDel(dto.getCommentId(), false)
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다."));
+
+
+
+            if(comment.getPost().getIsDel()) {
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "삭제된 게시물입니다.");
+            }
+
+            if(!userId.equals(comment.getUserId())) {
+                throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
+            }
+
+
+            comment.setTaggedUserId(dto.getTaggedUserId());
+            comment.setContent(dto.getContent());
+            comment.setUpdDtm(new Timestamp(System.currentTimeMillis()));
+
+            CommentUpdateResponse data = CommentUpdateResponse.toResponse(comment);
+
+            Set<Long> userIds = new HashSet<>();
+            userIds.add(userId);
+            if(dto.getTaggedUserId() != null) {
+                userIds.add(dto.getTaggedUserId());
+            }
+
+            Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
+            if (userMap.size() != userIds.size()) {
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
+            }
+
+            ExternalUser user = userMap.get(userId);
+            data.setUserNickname(user.getName());
+            data.setProfileUrl(user.getProfileUrl());
+
+            if(dto.getTaggedUserId() != null) {
+                ExternalUser taggedUser = userMap.get(dto.getTaggedUserId());
+                data.setTaggedUserId(taggedUser.getUserId());
+                data.setTaggedUserNickname(taggedUser.getName());
+            }
+
+            response.setResponse(HttpStatus.OK.value(), "Success", data);
+
+        } catch (InvalidDataException e) {
+            log.warn("Exception during comment update", e);
+            throw e;
+        } catch (Exception e) {
+            log.warn("Exception during comment update", e);
+            throw new Exception("댓글 수정에 실패하였습니다.");
+        }
+
+        return response;
+    }
+
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> deleteComment(Long commentId, Long userId) throws Exception {
+        ResponseObject<?> response = new ResponseObject<>();
+
+        try {
+            Comment comment = commentRepository.findByCommentIdAndIsDel(commentId, false)
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다."));
+
+            if(!userId.equals(comment.getUserId())) {
+                throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
+            }
+            comment.setIsDel(true);
+            response.setResponse(HttpStatus.OK.value(), "Success");
+
+        } catch (InvalidDataException e) {
+            log.warn("Exception during comment delete", e);
+            throw e;
+        } catch (Exception e) {
+            log.warn("Exception during comment delete", e);
+            throw new Exception("댓글 삭제에 실패하였습니다.");
+        }
+
+        return response;
+    }
 }
