@@ -62,8 +62,8 @@ public class PostService {
             PostSearchResponse data = PostSearchResponse.toDto(post);
             for(PostFile file : post.getFiles()) {
                 data.getFiles().add(new PostSearchResponse.PostSearchFile(
-                        FILE_BASE_URL+ "/files/post/"+file.getFileName(),
-                        FILE_BASE_URL+ "/files/post/"+file.getThumbnailName(),
+                        getFileUrl(file),
+                        getThumbnailUrl(file),
                         file.getSeq()
                 ));
             }
@@ -143,8 +143,8 @@ public class PostService {
 
                     for(PostFile file : post.getFiles()) {
                         data.getFiles().add(new PostSearchResponse.PostSearchFile(
-                                FILE_BASE_URL+ "/files/post/"+file.getFileName(),
-                                FILE_BASE_URL+ "/files/post/"+file.getThumbnailName(),
+                                getFileUrl(file),
+                                getThumbnailUrl(file),
                                 file.getSeq()
                         ));
                     }
@@ -375,7 +375,8 @@ public class PostService {
 
                 if(!post.getUserId().equals(userId)) {
                     String mediaType = getMediaType(post.getFiles());
-                    kafkaProducer.sendPostLikeEvent(new PostLikeEvent(post.getPostId(), post.getUserId(), userId, mediaType));
+                    kafkaProducer.sendPostLikeEvent(new PostLikeEvent(post.getPostId(), post.getUserId(), userId, mediaType
+                            , post.getFiles().isEmpty() ? null : getThumbnailUrl(post.getFiles().get(0))));
                 }
             } else {
                 if (existingLike.isEmpty()) {
@@ -446,7 +447,7 @@ public class PostService {
                 List<PostBatchSearchResponse> dataList = new ArrayList<>();
                 for(Post post: postList) {
                     PostBatchSearchResponse data = PostBatchSearchResponse.toDto(post);
-                    data.setThumbnailUrl(FILE_BASE_URL+ "/files/post/"+post.getFiles().get(0).getThumbnailName());
+                    data.setThumbnailUrl(post.getFiles().isEmpty() ? null : getThumbnailUrl(post.getFiles().get(0)));
                     data.setMediaType(getMediaType(post.getFiles()));
                     dataList.add(data);
                 }
@@ -464,10 +465,17 @@ public class PostService {
     }
 
     private String getMediaType(List<PostFile> fileList) {
-        if(!fileList.isEmpty()) {
+        if (!fileList.isEmpty()) {
             return FileUtil.isVideo(fileList.get(0).getFileName()) ? "동영상" : "사진";
-        }
-        else
+        } else
             return null;
+    }
+
+    private String getFileUrl(PostFile file) {
+        return FILE_BASE_URL+ "/files/post/"+ file.getFileName();
+    }
+
+    private String getThumbnailUrl(PostFile file) {
+        return FILE_BASE_URL+ "/files/post/"+ file.getThumbnailName();
     }
 }

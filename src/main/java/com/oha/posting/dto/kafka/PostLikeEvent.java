@@ -12,4 +12,5 @@ public class PostLikeEvent {
     private Long userId;
     private Long likeUserId;
     private String mediaType;
+    private String thumbnailUrl;
 }

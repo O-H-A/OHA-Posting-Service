@@ -65,7 +65,7 @@ public class FileService {
                     .sourceRegion(Positions.CENTER, targetWidth, targetHeight) // 크롭
                     .size(targetWidth, targetHeight)
                     .outputFormat("jpg")
-                    .toFile(new File(thumbnailPath));
+                    .toFile(new File(FileUtil.getFileNameWithoutExtension(thumbnailPath)));
         }
         else {
             targetWidth = Math.min(originWidth, originHeight);
@@ -75,7 +75,7 @@ public class FileService {
                     .sourceRegion(Positions.CENTER, targetWidth, targetHeight) // 크롭
                     .size(targetWidth, targetHeight)
                     .outputFormat("jpg")
-                    .toFile(new File(thumbnailPath));
+                    .toFile(new File(FileUtil.getFileNameWithoutExtension(thumbnailPath)));
         }
     }
 }
