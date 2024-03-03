@@ -61,6 +61,7 @@ public class CommentController {
                                                     - 200: 성공
                                                     - 400: 데이터 오류
                                                     - 403: 권한 오류
+                                                    - 404: 댓글 없음
                                                     - 500: 서버 오류
                                                     """)
     public ResponseObject<CommentUpdateResponse> updateComment(@RequestBody @Validated CommentUpdateRequest dto
@@ -75,6 +76,7 @@ public class CommentController {
                                                     - 200: 성공
                                                     - 400: 데이터 오류
                                                     - 403: 권한 오류
+                                                    - 404: 댓글 없음
                                                     - 500: 서버 오류
                                                     """)
     public ResponseObject<?> deleteComment(@PathVariable(value = "commentId") Long commentId
@@ -88,8 +90,10 @@ public class CommentController {
                                                     - 200: 좋아요 취소 성공
                                                     - `201`: 좋아요 성공
                                                     - 400: 데이터 오류
+                                                    - 404: 댓글 없음
                                                     - 409: 중복 오류
-                                                    - 500: 서버 오류
+                                                    - 500: 서버 오류\n
+                                                    **type: L(Like) 또는 U(Unlike) 중 한 글자만 입력해주세요**
                                                     """)
     public ResponseObject<?> likeComment(@RequestBody @Validated CommentLikeRequest dto
                                                            , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId

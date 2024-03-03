@@ -40,6 +40,7 @@ public class WeatherController {
     @Operation(summary = "등록한 동네 날씨 조회", description = """
                                                      **Status Code:**
                                                      - 200: 성공
+                                                     - 404: 동네 날씨 없음
                                                      - 500: 서버 오류
                                                      """)
     public ResponseObject<WeatherSearchResponse> getMyWeather(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
@@ -52,8 +53,8 @@ public class WeatherController {
                                                      **Status Code:**
                                                      - `201`: 성공
                                                      - 400: 데이터 오류
-                                                     - 404: 게시물 없음
-                                                     - 500: 서버 오류\n
+                                                     - 409: 중복 오류
+                                                     - 500: 서버 오류
                                                      """)
     public ResponseObject<WeatherInsertResponse> insertWeather(@RequestBody @Validated WeatherInsertRequest dto
                                                              , @Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
@@ -68,7 +69,7 @@ public class WeatherController {
                                                      - 200: 성공
                                                      - 400: 데이터 오류
                                                      - 403: 권한 없음
-                                                     - 404: 게시물 없음
+                                                     - 404: 동네 날씨 없음
                                                      - 500: 서버 오류\n
                                                      """)
     public ResponseObject<?> updateWeather(@RequestBody @Validated WeatherUpdateRequest dto
@@ -84,7 +85,7 @@ public class WeatherController {
                                                      - 200: 성공
                                                      - 400: 데이터 오류
                                                      - 403: 권한 없음
-                                                     - 404: 게시물 없음
+                                                     - 404: 동네 날씨 없음
                                                      - 500: 서버 오류
                                                      """)
     public ResponseObject<?> deleteWeather(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId

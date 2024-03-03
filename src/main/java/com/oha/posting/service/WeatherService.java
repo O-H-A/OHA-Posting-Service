@@ -139,7 +139,7 @@ public class WeatherService {
         try {
             // 동네 날씨 조회
             Weather weather = weatherRepository.findById(dto.getWeatherId()).orElseThrow(
-                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "등록한 날씨 정보가 없습니다."));
+                    () -> new InvalidDataException(HttpStatus.NOT_FOUND, "등록한 날씨 정보가 없습니다."));
 
             // 본인 확인
             if(!userId.equals(weather.getUserId())) {
@@ -178,7 +178,7 @@ public class WeatherService {
         try{
             // 동네 날씨 조회
             Weather weather = weatherRepository.findById(weatherId).orElseThrow(
-                    () -> new InvalidDataException(HttpStatus.BAD_REQUEST, "등록한 날씨 정보가 없습니다."));
+                    () -> new InvalidDataException(HttpStatus.NOT_FOUND, "등록한 날씨 정보가 없습니다."));
 
             // 본인 확인
             if(!userId.equals(weather.getUserId())) {
@@ -208,7 +208,7 @@ public class WeatherService {
             Date currentDate = Date.valueOf(LocalDate.now());
 
             WeatherSearchResponse data = weatherRepository.searchWeather(userId, regionCode, dayParts, currentDate)
-                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "등록한 날씨 정보가 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "등록한 날씨 정보가 없습니다."));
 
             response.setResponse(HttpStatus.OK.value(), "Success", data);
         } catch (InvalidDataException e) {

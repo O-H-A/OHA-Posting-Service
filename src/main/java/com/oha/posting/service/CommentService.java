@@ -186,7 +186,7 @@ public class CommentService {
 
         try{
             Comment comment = commentRepository.findByCommentIdAndIsDel(dto.getCommentId(), false)
-                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "댓글이 없습니다."));
 
 
 
@@ -245,7 +245,7 @@ public class CommentService {
 
         try {
             Comment comment = commentRepository.findByCommentIdAndIsDel(commentId, false)
-                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "댓글이 없습니다."));
 
             if(!userId.equals(comment.getUserId())) {
                 throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
@@ -270,7 +270,7 @@ public class CommentService {
 
         try {
             Comment comment = commentRepository.findByCommentIdAndIsDel(dto.getCommentId(), false)
-                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다."));
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "댓글이 없습니다."));
 
             if(comment.getPost().getIsDel()) {
                 throw new InvalidDataException(HttpStatus.BAD_REQUEST, "삭제된 게시물입니다.");
