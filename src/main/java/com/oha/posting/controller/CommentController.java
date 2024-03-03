@@ -81,4 +81,19 @@ public class CommentController {
                                          , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
         return commentService.deleteComment(commentId, userId);
     }
+
+    @PostMapping(value = "/post/comment/like")
+    @Operation(summary = "게시물 댓글 좋아요", description = """ 
+                                                    **Status Code:**
+                                                    - 200: 좋아요 취소 성공
+                                                    - `201`: 좋아요 성공
+                                                    - 400: 데이터 오류
+                                                    - 409: 중복 오류
+                                                    - 500: 서버 오류
+                                                    """)
+    public ResponseObject<?> likeComment(@RequestBody @Validated CommentLikeRequest dto
+                                                           , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
+                                                           , HttpServletResponse httpServletResponse) throws Exception {
+        return commentService.likeComment(dto, userId, httpServletResponse);
+    }
 }

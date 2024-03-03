@@ -1,6 +1,7 @@
 package com.oha.posting.repository;
 
 import com.oha.posting.dto.comment.CommentSearchResponse;
+import com.oha.posting.entity.CommentLikeId;
 import com.oha.posting.entity.QComment;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
@@ -10,9 +11,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.oha.posting.entity.QComment.comment;
+import static com.oha.posting.entity.QCommentLike.commentLike;
 import static com.oha.posting.entity.QPost.post;
+import static com.querydsl.core.group.GroupBy.groupBy;
+import static com.querydsl.core.group.GroupBy.list;
 
 @RequiredArgsConstructor
 @Repository
@@ -44,5 +49,20 @@ public class CommentRepositoryImpl implements CommentRepositoryCustom {
                 .offset(offset)
                 .limit(size)
                 .fetch();
+    }
+
+    @Override
+    public Map<Long, List<Long>> getCommentLikeUsers(List<Long> commentIds) {
+        return queryFactory
+                .select(Projections.constructor(CommentLikeId.class
+                        , commentLike.commentLikeId.commentId
+                        , commentLike.commentLikeId.userId))
+                .from(commentLike)
+                .where(commentLike.commentLikeId.commentId.in(commentIds))
+                .transform(
+                        groupBy(commentLike.commentLikeId.commentId).as(
+                              list(commentLike.commentLikeId.userId)
+                        )
+                );
     }
 }

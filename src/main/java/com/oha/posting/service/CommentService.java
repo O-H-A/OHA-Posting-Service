@@ -4,9 +4,8 @@ import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.dto.comment.*;
 import com.oha.posting.dto.external.ExternalUser;
-import com.oha.posting.entity.Comment;
-import com.oha.posting.entity.Post;
-import com.oha.posting.entity.QComment;
+import com.oha.posting.entity.*;
+import com.oha.posting.repository.CommentLikeRepository;
 import com.oha.posting.repository.CommentRepository;
 import com.oha.posting.repository.PostRepository;
 import com.querydsl.core.BooleanBuilder;
@@ -30,6 +29,7 @@ public class CommentService {
 
     private final PostRepository postRepository;
     private final ExternalApiService externalApiService;
+    private final CommentLikeRepository commentLikeRepository;
 
 
     @Transactional(readOnly = true)
@@ -62,6 +62,18 @@ public class CommentService {
                 throw new InvalidDataException(HttpStatus.NOT_FOUND, "댓글이 없습니다.");
             }
             else {
+                List<Long> commentIds = commentList.stream().map(CommentSearchResponse::getCommentId).toList();
+                Map<Long, List<Long>> likeUsers = commentRepository.getCommentLikeUsers(commentIds);
+                for (CommentSearchResponse comment : commentList) {
+                    List<Long> commentLikes = likeUsers.get(comment.getCommentId());
+                    if (commentLikes != null) {
+                        comment.setLikeUsers(commentLikes);
+                        comment.setLikeCount(commentLikes.size());
+                    } else {
+                        comment.setLikeCount(0);
+                    }
+                }
+
                 Set<Long> userIds = new HashSet<>();
                 for(CommentSearchResponse c : commentList) {
                     userIds.add(c.getUserId());
@@ -247,6 +259,49 @@ public class CommentService {
         } catch (Exception e) {
             log.warn("Exception during comment delete", e);
             throw new Exception("댓글 삭제에 실패하였습니다.");
+        }
+
+        return response;
+    }
+
+    @Transactional
+    public ResponseObject<?> likeComment(CommentLikeRequest dto, Long userId, HttpServletResponse httpServletResponse) throws Exception {
+        ResponseObject<?> response = new ResponseObject<>();
+
+        try {
+            Comment comment = commentRepository.findByCommentIdAndIsDel(dto.getCommentId(), false)
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다."));
+
+            if(comment.getPost().getIsDel()) {
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "삭제된 게시물입니다.");
+            }
+
+            CommentLikeId commentLikeId = new CommentLikeId(dto.getCommentId(), userId);
+            Optional<CommentLike> existingLike = commentLikeRepository.findById(commentLikeId);
+
+            if("L".equals(dto.getType())) {
+                if(existingLike.isPresent()) {
+                    throw new InvalidDataException(HttpStatus.CONFLICT, "이미 좋아요 상태입니다.");
+                }
+
+                comment.getLikes().add(new CommentLike(commentLikeId, comment));
+                response.setResponse(HttpStatus.CREATED.value(), "Success");
+                httpServletResponse.setStatus(HttpStatus.CREATED.value());
+            } else {
+                if (existingLike.isEmpty()) {
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "좋아요 상태가 아닙니다.");
+                }
+
+                commentLikeRepository.delete(existingLike.get());
+                response.setResponse(HttpStatus.OK.value(), "Success");
+            }
+
+        } catch (InvalidDataException e) {
+            log.warn("Exception during comment like", e);
+            throw e;
+        } catch (Exception e) {
+            log.warn("Exception during comment like", e);
+            throw new Exception("댓글 좋아요에 실패하였습니다.");
         }
 
         return response;

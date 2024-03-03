@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -54,6 +55,12 @@ public class CommentSearchResponse {
 
     @Schema(description = "대댓글 개수", example = "10")
     private Long replyCount;
+
+    @Schema(description = "좋아요 사용자", example = "[1,2,3]")
+    private List<Long> likeUsers;
+
+    @Schema(description = "좋아요 수", example = "10")
+    private Integer likeCount;
 
     public CommentSearchResponse(Long commentId, Long parentId, Long postId, String content, Long userId, Long taggedUserId, Timestamp regDtm, Timestamp updDtm, Long replyCount) {
         this.commentId = commentId;

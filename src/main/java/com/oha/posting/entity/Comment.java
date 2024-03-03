@@ -27,6 +27,9 @@ public class Comment {
 
     private Long taggedUserId;
 
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<CommentLike> likes = new ArrayList<>();
+
     @ManyToOne
     @JoinColumn(name = "parent_id")
     private Comment parent;
