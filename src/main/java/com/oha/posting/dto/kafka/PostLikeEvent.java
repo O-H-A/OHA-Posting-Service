@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PostLikeEvent {
-    private Long postId;
-    private Long userId;
-    private Long likeUserId;
-    private String mediaType;
-    private String thumbnailUrl;
+    private Long post_id;
+    private Long user_id;
+    private Long like_user_id;
+    private String media_type;
+    private String thumbnail_url;
 }

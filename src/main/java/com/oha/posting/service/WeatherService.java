@@ -3,6 +3,7 @@ package com.oha.posting.service;
 import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.dto.external.ExternalLocation;
+import com.oha.posting.dto.kafka.WeatherRegEvent;
 import com.oha.posting.dto.weather.WeatherInsertRequest;
 import com.oha.posting.dto.weather.WeatherUpdateRequest;
 import com.oha.posting.dto.weather.WeatherCountSearchResponse;
@@ -16,6 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class WeatherService {
     private final WeatherRepository weatherRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final ExternalApiService externalApiService;
+    private final KafkaProducer kafkaProducer;
 
     @Transactional(readOnly = true)
     public ResponseObject<List<WeatherCountSearchResponse>> getWeatherCount(String token, Long regionCode) throws Exception {
@@ -220,5 +223,16 @@ public class WeatherService {
         }
 
         return response;
+    }
+
+    @Scheduled(cron = "0 0 0,6,12,18 * * *") // 매일 0, 6, 12, 18시
+    public void executeServiceLogic() {
+        try {
+            WeatherRegEvent event = new WeatherRegEvent(getDayParts());
+            kafkaProducer.sendWeatherRegEvent(event);
+        } catch (Exception e) {
+            log.warn("Exception during send weather reg event");
+        }
+
     }
 }
