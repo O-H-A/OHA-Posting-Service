@@ -11,4 +11,6 @@ public interface PostRepositoryCustom {
     List<Post> searchPostList(BooleanBuilder builder, List<OrderSpecifier<?>> orderSpecifiers, int offset, int size);
 
     List<Post> searchPostBatch(BooleanBuilder builder);
+
+    List<Post> searchPostList(Long userId);
 }

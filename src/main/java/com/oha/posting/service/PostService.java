@@ -138,29 +138,7 @@ public class PostService {
                     throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
                 }
 
-                for(Post post: postList) {
-                    PostSearchResponse data = PostSearchResponse.toDto(post);
-
-                    for(PostFile file : post.getFiles()) {
-                        data.getFiles().add(new PostSearchResponse.PostSearchFile(
-                                getFileUrl(file),
-                                getThumbnailUrl(file),
-                                file.getSeq()
-                        ));
-                    }
-
-                    // user 정보 매핑
-                    ExternalUser user = userMap.get(post.getUserId());
-                    data.setUserNickname(user.getName());
-                    data.setProfileUrl(user.getProfileUrl());
-
-                    // 위치 정보 매핑
-                    ExternalLocation location = locationMap.get(post.getRegionCode().toString());
-                    data.setLocationInfo(location);
-
-                    dataList.add(data);
-                }
-
+                setPostInfo(dataList, postList, userMap, locationMap);
                 response.setResponse(HttpStatus.OK.value(), "Success", dataList);
             }
         }
@@ -174,6 +152,74 @@ public class PostService {
         }
 
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseObject<List<PostSearchResponse>> getPostsByUser(String token, Long userId) throws Exception {
+        ResponseObject<List<PostSearchResponse>> response = new ResponseObject<>();
+        List<PostSearchResponse> dataList = new ArrayList<>();
+        try{
+            List<Post> postList = postRepository.searchPostList(userId);
+
+            if(postList.isEmpty()) {
+                throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
+            }
+            else {
+                Set<Long> userIds = Set.of(userId);
+
+//              user 리스트 조회
+                Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
+                if (userMap.size() != userIds.size()) {
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
+                }
+
+                Set<Long> codes = new HashSet<>();
+                postList.forEach(post -> codes.add(post.getRegionCode()));
+
+                Map<String, ExternalLocation> locationMap = externalApiService.getLocationMap(token, codes);
+                if (locationMap.size() != codes.size()) {
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "위치 정보를 찾을 수 없습니다.");
+                }
+
+                setPostInfo(dataList, postList, userMap, locationMap);
+                response.setResponse(HttpStatus.OK.value(), "Success", dataList);
+            }
+        }
+        catch (InvalidDataException e) {
+            log.warn("Exception during post search", e);
+            throw e;
+        }
+        catch (Exception e) {
+            log.warn("Exception during post search", e);
+            throw new Exception("게시물 조회에 실패하였습니다.");
+        }
+
+        return response;
+    }
+
+    private void setPostInfo(List<PostSearchResponse> dataList, List<Post> postList, Map<Long, ExternalUser> userMap, Map<String, ExternalLocation> locationMap) {
+        for(Post post: postList) {
+            PostSearchResponse data = PostSearchResponse.toDto(post);
+
+            for(PostFile file : post.getFiles()) {
+                data.getFiles().add(new PostSearchResponse.PostSearchFile(
+                        getFileUrl(file),
+                        getThumbnailUrl(file),
+                        file.getSeq()
+                ));
+            }
+
+            // user 정보 매핑
+            ExternalUser user = userMap.get(post.getUserId());
+            data.setUserNickname(user.getName());
+            data.setProfileUrl(user.getProfileUrl());
+
+            // 위치 정보 매핑
+            ExternalLocation location = locationMap.get(post.getRegionCode().toString());
+            data.setLocationInfo(location);
+
+            dataList.add(data);
+        }
     }
 
     @Transactional(rollbackFor = {Exception.class})
@@ -476,6 +522,6 @@ public class PostService {
     }
 
     private String getThumbnailUrl(PostFile file) {
-        return FILE_BASE_URL+ "/files/post/"+ file.getThumbnailName();
+        return FILE_BASE_URL + "/files/post/" + file.getThumbnailName();
     }
 }

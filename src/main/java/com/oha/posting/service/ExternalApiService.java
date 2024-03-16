@@ -117,4 +117,22 @@ public class ExternalApiService {
         List<ExternalUser> userList = getUserList(token, userIds);
         return userList.stream().collect(Collectors.toMap(ExternalUser::getUserId, user -> user));
     }
+
+    public List<ExternalLocation> getLocationList(String token, Set<Long> codes) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("codes", codes);
+
+            ParameterizedTypeReference<ResponseObject<List<ExternalLocation>>> typeReference = new ParameterizedTypeReference<>(){};
+            return post("/api/common/location/getnamebycodes", token, body, typeReference).getData();
+
+        } catch (Exception e) {
+            throw new InvalidDataException(HttpStatus.BAD_REQUEST,"위치 정보를 찾을 수 없습니다.");
+        }
+    }
+
+    public Map<String, ExternalLocation> getLocationMap(String token, Set<Long> codes) {
+        List<ExternalLocation> locationList = getLocationList(token, codes);
+        return locationList.stream().collect(Collectors.toMap(ExternalLocation::getCode, location -> location));
+    }
 }

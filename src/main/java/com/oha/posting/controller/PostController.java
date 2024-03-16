@@ -60,6 +60,19 @@ public class PostController {
         return postService.getPostList(token, regionCode, popular, categoryCode, offset, size);
     }
 
+    @GetMapping("/posts/user")
+    @Operation(summary = "사용자 게시물 전체 조회", description = """
+                                                          **statusCode:**
+                                                          - 200: 성공
+                                                          - 400: 데이터 오류
+                                                          - 404: 게시물 없음
+                                                          - 500: 서버 오류
+                                                          """)
+    public ResponseObject<List<PostSearchResponse>> getPostsByUser(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
+                                                                  , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
+        return postService.getPostsByUser(token, userId);
+    }
+
     @PostMapping("/posts/batch-search")
     @Operation(summary = "게시물 일괄 조회")
     public ResponseObject<List<PostBatchSearchResponse>> searchPostBatch(@RequestBody @Validated PostBatchSearchRequest dto) throws Exception {
