@@ -4,6 +4,7 @@ import com.oha.posting.config.exception.InvalidDataException;
 import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.dto.comment.*;
 import com.oha.posting.dto.external.ExternalUser;
+import com.oha.posting.dto.kafka.PostCommentEvent;
 import com.oha.posting.entity.*;
 import com.oha.posting.repository.CommentLikeRepository;
 import com.oha.posting.repository.CommentRepository;
@@ -30,6 +31,8 @@ public class CommentService {
     private final PostRepository postRepository;
     private final ExternalApiService externalApiService;
     private final CommentLikeRepository commentLikeRepository;
+    private final KafkaProducer kafkaProducer;
+    private final PostService postService;
 
 
     @Transactional(readOnly = true)
@@ -165,6 +168,15 @@ public class CommentService {
             Comment savedComment = commentRepository.save(comment);
             data.setCommentId(savedComment.getCommentId());
             data.setRegDtm(savedComment.getRegDtm());
+
+            if(!post.getUserId().equals(userId)) { // 본인 게시물 댓글 알림 x
+                kafkaProducer.sendPostCommentEvent(new PostCommentEvent(
+                        post.getPostId()
+                        , post.getUserId()
+                        , userId
+                        , comment.getContent()
+                        , post.getFiles().isEmpty() ? null : postService.getThumbnailUrl(post.getFiles().get(0))));
+            }
 
             response.setResponse(HttpStatus.CREATED.value(), "Success", data);
             httpServletResponse.setStatus(HttpStatus.CREATED.value());

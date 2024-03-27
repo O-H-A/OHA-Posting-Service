@@ -1,5 +1,6 @@
 package com.oha.posting.service;
 
+import com.oha.posting.dto.kafka.PostCommentEvent;
 import com.oha.posting.dto.kafka.PostLikeEvent;
 import com.oha.posting.dto.kafka.WeatherRegEvent;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class KafkaProducer {
     private String profile;
     private final KafkaTemplate<String, PostLikeEvent> postLikeTemplate;
     private final KafkaTemplate<String, WeatherRegEvent> weatherRegTemplate;
+    private final KafkaTemplate<String, PostCommentEvent> postCommentTemplate;
 
     public void sendPostLikeEvent(PostLikeEvent event) {
         this.postLikeTemplate.send("post-like-"+profile, event);
@@ -26,5 +28,10 @@ public class KafkaProducer {
     public void sendWeatherRegEvent(WeatherRegEvent event) {
         this.weatherRegTemplate.send("weather-reg-"+profile, event);
         log.info("weather-reg send: "+ event);
+    }
+
+    public void sendPostCommentEvent(PostCommentEvent event) {
+        this.postCommentTemplate.send("post-comment-"+profile, event);
+        log.info("post-comment send: "+ event);
     }
 }

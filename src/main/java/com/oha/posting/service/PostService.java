@@ -521,7 +521,7 @@ public class PostService {
         return FILE_BASE_URL+ "/files/post/"+ file.getFileName();
     }
 
-    private String getThumbnailUrl(PostFile file) {
+    public String getThumbnailUrl(PostFile file) {
         return FILE_BASE_URL + "/files/post/" + file.getThumbnailName();
     }
 }
