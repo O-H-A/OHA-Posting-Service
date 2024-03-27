@@ -43,9 +43,8 @@ public class WeatherController {
                                                      - 404: 동네 날씨 없음
                                                      - 500: 서버 오류
                                                      """)
-    public ResponseObject<WeatherSearchResponse> getMyWeather(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
-                                                                 , @RequestParam(name = "regionCode") Long regionCode) throws Exception {
-        return weatherService.getMyWeather(userId, regionCode);
+    public ResponseObject<List<WeatherSearchResponse>> getMyWeather(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
+        return weatherService.getMyWeather(userId);
     }
 
     @PostMapping("/weather")

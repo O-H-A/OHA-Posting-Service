@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Date;
 import java.util.List;
-import java.util.Optional;
 
 import static com.oha.posting.entity.QCommonCode.commonCode;
 import static com.oha.posting.entity.QWeather.weather;
@@ -42,8 +41,8 @@ public class WeatherRepositoryImpl implements WeatherRepositoryCustom {
     }
 
     @Override
-    public Optional<WeatherSearchResponse> searchWeather(Long userId, Long regionCode, int dayParts, Date currentDate) {
-        WeatherSearchResponse result = queryFactory
+    public List<WeatherSearchResponse> searchWeather(Long userId, int dayParts, Date currentDate) {
+        return queryFactory
                 .select(Projections.constructor(WeatherSearchResponse.class
                         , weather.weatherId
                         , weather.userId
@@ -56,11 +55,7 @@ public class WeatherRepositoryImpl implements WeatherRepositoryCustom {
                 .from(weather)
                 .innerJoin(commonCode)
                 .on(weather.weatherCommonCode.code.eq(commonCode.code))
-                .where(weather.userId.eq(userId), weather.regionCode.eq(regionCode)
-                        , weather.dayParts.eq(dayParts), weather.weatherDt.eq(currentDate))
-                .fetch()
-                .get(0);
-
-        return Optional.ofNullable(result);
+                .where(weather.userId.eq(userId), weather.dayParts.eq(dayParts), weather.weatherDt.eq(currentDate))
+                .fetch();
     }
 }

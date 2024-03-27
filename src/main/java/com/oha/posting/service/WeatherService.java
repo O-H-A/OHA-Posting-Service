@@ -74,7 +74,7 @@ public class WeatherService {
             Date currentDate = Date.valueOf(LocalDate.now());
 
             // 중복 조회 (같은 시간대 등록된 동네 날씨 확인)
-            if (weatherRepository.findByUserIdAndDayPartsAndWeatherDt(userId, dayParts, currentDate)
+            if (weatherRepository.findByUserIdAndDayPartsAndWeatherDtAndRegionCode(userId, dayParts, currentDate, dto.getRegionCode())
                     .isPresent()) {
                 throw new InvalidDataException(HttpStatus.CONFLICT, "날씨는 한 번만 등록하실 수 있습니다.");
             }
@@ -203,15 +203,18 @@ public class WeatherService {
         return response;
     }
 
-    public ResponseObject<WeatherSearchResponse> getMyWeather(Long userId, Long regionCode) throws Exception {
-        ResponseObject<WeatherSearchResponse> response = new ResponseObject<>();
+    public ResponseObject<List<WeatherSearchResponse>> getMyWeather(Long userId) throws Exception {
+        ResponseObject<List<WeatherSearchResponse>> response = new ResponseObject<>();
 
         try{
             int dayParts = getDayParts();
             Date currentDate = Date.valueOf(LocalDate.now());
 
-            WeatherSearchResponse data = weatherRepository.searchWeather(userId, regionCode, dayParts, currentDate)
-                    .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "등록한 날씨 정보가 없습니다."));
+            List<WeatherSearchResponse> data = weatherRepository.searchWeather(userId, dayParts, currentDate);
+
+            if(data.isEmpty()) {
+                throw new InvalidDataException(HttpStatus.NOT_FOUND, "등록한 날씨 정보가 없습니다.");
+            }
 
             response.setResponse(HttpStatus.OK.value(), "Success", data);
         } catch (InvalidDataException e) {

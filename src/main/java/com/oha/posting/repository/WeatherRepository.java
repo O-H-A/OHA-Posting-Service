@@ -8,5 +8,5 @@ import java.util.Optional;
 
 public interface WeatherRepository extends JpaRepository<Weather, Long>, WeatherRepositoryCustom {
 
-    Optional<Weather> findByUserIdAndDayPartsAndWeatherDt(Long userId, Integer dayParts, Date weatherDate);
+    Optional<Weather> findByUserIdAndDayPartsAndWeatherDtAndRegionCode(Long userId, Integer dayParts, Date weatherDate, Long regionCode);
 }
