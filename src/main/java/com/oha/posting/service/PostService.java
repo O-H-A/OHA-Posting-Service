@@ -8,9 +8,6 @@ import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.external.ExternalUser;
 import com.oha.posting.dto.kafka.PostLikeEvent;
 import com.oha.posting.dto.post.*;
-import com.oha.posting.dto.post.PostBatchSearchResponse;
-import com.oha.posting.dto.post.PostInsertResponse;
-import com.oha.posting.dto.post.PostSearchResponse;
 import com.oha.posting.entity.*;
 import com.oha.posting.repository.CommonCodeRepository;
 import com.oha.posting.repository.LikeRepository;
@@ -134,11 +131,11 @@ public class PostService {
 
 //              user 리스트 조회
                 Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
-                if (userMap.size() != userIds.size()) {
-                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
+                setPostInfo(dataList, postList, userMap, locationMap);
+                if(dataList.isEmpty()) {
+                    throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
                 }
 
-                setPostInfo(dataList, postList, userMap, locationMap);
                 response.setResponse(HttpStatus.OK.value(), "Success", dataList);
             }
         }
@@ -169,19 +166,16 @@ public class PostService {
 
 //              user 리스트 조회
                 Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
-                if (userMap.size() != userIds.size()) {
-                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
-                }
 
                 Set<Long> codes = new HashSet<>();
                 postList.forEach(post -> codes.add(post.getRegionCode()));
-
                 Map<String, ExternalLocation> locationMap = externalApiService.getLocationMap(token, codes);
-                if (locationMap.size() != codes.size()) {
-                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "위치 정보를 찾을 수 없습니다.");
-                }
 
                 setPostInfo(dataList, postList, userMap, locationMap);
+                if(dataList.isEmpty()) {
+                    throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
+                }
+
                 response.setResponse(HttpStatus.OK.value(), "Success", dataList);
             }
         }
@@ -211,13 +205,20 @@ public class PostService {
 
             // user 정보 매핑
             ExternalUser user = userMap.get(post.getUserId());
+            if(user == null) {
+                continue;
+            }
+
             data.setUserNickname(user.getName());
             data.setProfileUrl(user.getProfileUrl());
 
             // 위치 정보 매핑
             ExternalLocation location = locationMap.get(post.getRegionCode().toString());
-            data.setLocationInfo(location);
+            if(location == null) {
+                continue;
+            }
 
+            data.setLocationInfo(location);
             dataList.add(data);
         }
     }

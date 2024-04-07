@@ -106,7 +106,8 @@ public class ExternalApiService {
                 cachedUserList.addAll(userList);
 
             } catch (Exception e) {
-                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
+//                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
+                return new ArrayList<>();
             }
         }
         return cachedUserList;

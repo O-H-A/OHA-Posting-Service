@@ -86,21 +86,32 @@ public class CommentService {
                 }
 
                 Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
-                if (userMap.size() != userIds.size()) {
-                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
-                }
 
-                for(CommentSearchResponse c : commentList) {
+                Iterator<CommentSearchResponse> iterator = commentList.iterator();
+                while(iterator.hasNext()) {
+                    CommentSearchResponse c = iterator.next();
                     // user 정보
                     ExternalUser user = userMap.get(c.getUserId());
+
+                    if(user == null) {
+                        iterator.remove();
+                        continue;
+                    }
+
                     c.setUserNickname(user.getName());
                     c.setProfileUrl(user.getProfileUrl());
 
                     // tagged user 정보
                     if(c.getTaggedUserId() != null) {
                         ExternalUser taggedUser = userMap.get(c.getTaggedUserId());
-                        c.setTaggedUserNickname(taggedUser.getName());
+                        if(taggedUser != null) {
+                            c.setTaggedUserNickname(taggedUser.getName());
+                        }
                     }
+                }
+
+                if(commentList.isEmpty()) {
+                    throw new InvalidDataException(HttpStatus.NOT_FOUND, "댓글이 없습니다.");
                 }
 
                 response.setResponse(HttpStatus.OK.value(), "Success", commentList);
