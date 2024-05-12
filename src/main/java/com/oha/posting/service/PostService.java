@@ -57,10 +57,10 @@ public class PostService {
                     .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
             PostSearchResponse data = PostSearchResponse.toDto(post);
+            data.setThumbnailUrl(getThumbnailUrl(post));
             for(PostFile file : post.getFiles()) {
                 data.getFiles().add(new PostSearchResponse.PostSearchFile(
                         getFileUrl(file),
-                        getThumbnailUrl(file),
                         file.getSeq()
                 ));
             }
@@ -71,7 +71,7 @@ public class PostService {
                 throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
             }
 
-            data.setUserNickname(userMap.get(post.getUserId()).getName());
+            data.setUserName(userMap.get(post.getUserId()).getName());
             data.setProfileUrl(userMap.get(post.getUserId()).getProfileUrl());
 
             // 행정구역코드로 위치 조회 API 호출
@@ -195,10 +195,10 @@ public class PostService {
         for(Post post: postList) {
             PostSearchResponse data = PostSearchResponse.toDto(post);
 
+            data.setThumbnailUrl(getThumbnailUrl(post));
             for(PostFile file : post.getFiles()) {
                 data.getFiles().add(new PostSearchResponse.PostSearchFile(
                         getFileUrl(file),
-                        getThumbnailUrl(file),
                         file.getSeq()
                 ));
             }
@@ -209,7 +209,7 @@ public class PostService {
                 continue;
             }
 
-            data.setUserNickname(user.getName());
+            data.setUserName(user.getName());
             data.setProfileUrl(user.getProfileUrl());
 
             // 위치 정보 매핑
@@ -274,7 +274,6 @@ public class PostService {
         for (PostFile file : fileList) {
             try {
                 FileUtil.deleteFile(file.getDirectory()+file.getFileName());
-                FileUtil.deleteFile(file.getDirectory()+file.getThumbnailName());
             } catch (IOException e) {
                 log.warn("Exception during file delete", e);
             }
@@ -359,14 +358,23 @@ public class PostService {
 
             // 파일 db 저장
             String fileName = timestamp + "" + post.getUserId() + "" + order;
-            String thumbnailName = "s_"+fileName;
             String postSavePath = SAVE_PATH + "post/";
 
-            PostFile postFile = new PostFile(post, postSavePath, fileName + "." + extension, thumbnailName+".jpg", order);
+            PostFile postFile = new PostFile(post, postSavePath, fileName + "." + extension, order);
             post.getFiles().add(postFile);
 
-            // 파일, 썸네일 저장
-            fileService.saveFileWithThumbnail(file, postSavePath, fileName+ "." + extension);
+            if(order == 0) {
+                String thumbnailName = "s_"+fileName;
+                post.setThumbnailName(thumbnailName+".jpg");
+
+                // 파일, 썸네일 저장
+                fileService.saveFile(file, postSavePath, fileName+ "." + extension, true);
+            }
+            else {
+                // 파일만 저장
+                fileService.saveFile(file, postSavePath, fileName+ "." + extension, false);
+            }
+
         }
     }
 
@@ -423,7 +431,7 @@ public class PostService {
                 if(!post.getUserId().equals(userId)) {
                     String mediaType = getMediaType(post.getFiles());
                     kafkaProducer.sendPostLikeEvent(new PostLikeEvent(post.getPostId(), post.getUserId(), userId, mediaType
-                            , post.getFiles().isEmpty() ? null : getThumbnailUrl(post.getFiles().get(0))));
+                            , getThumbnailUrl(post)));
                 }
             } else {
                 if (existingLike.isEmpty()) {
@@ -494,7 +502,7 @@ public class PostService {
                 List<PostBatchSearchResponse> dataList = new ArrayList<>();
                 for(Post post: postList) {
                     PostBatchSearchResponse data = PostBatchSearchResponse.toDto(post);
-                    data.setThumbnailUrl(post.getFiles().isEmpty() ? null : getThumbnailUrl(post.getFiles().get(0)));
+                    data.setThumbnailUrl(getThumbnailUrl(post));
                     data.setMediaType(getMediaType(post.getFiles()));
                     dataList.add(data);
                 }
@@ -518,11 +526,13 @@ public class PostService {
             return null;
     }
 
-    private String getFileUrl(PostFile file) {
+    public String getFileUrl(PostFile file) {
         return FILE_BASE_URL+ "/files/post/"+ file.getFileName();
     }
 
-    public String getThumbnailUrl(PostFile file) {
-        return FILE_BASE_URL + "/files/post/" + file.getThumbnailName();
+    public String getThumbnailUrl(Post post) {
+        return Optional.ofNullable(post.getThumbnailName())
+                .map(thumbnailName -> FILE_BASE_URL + "/files/post/" + thumbnailName)
+                .orElse(null);
     }
 }

@@ -19,15 +19,12 @@ public class PostFile {
     private Post post;
     private String directory;
     private String fileName;
-
-    private String thumbnailName;
     private Integer seq;
 
-    public PostFile (Post post, String directory, String fileName, String thumbnailName, Integer seq) {
+    public PostFile (Post post, String directory, String fileName, Integer seq) {
         this.post = post;
         this.directory = directory;
         this.fileName = fileName;
-        this.thumbnailName = thumbnailName;
         this.seq = seq;
     }
 }

@@ -186,7 +186,7 @@ public class CommentService {
                         , post.getUserId()
                         , userId
                         , comment.getContent()
-                        , post.getFiles().isEmpty() ? null : postService.getThumbnailUrl(post.getFiles().get(0))));
+                        , postService.getThumbnailUrl(post)));
             }
 
             response.setResponse(HttpStatus.CREATED.value(), "Success", data);

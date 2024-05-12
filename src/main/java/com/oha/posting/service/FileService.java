@@ -19,7 +19,7 @@ import java.io.IOException;
 @Service
 public class FileService {
 
-    public void saveFileWithThumbnail(MultipartFile multipartFile, String baseSavePath, String fileName) throws IOException, JCodecException {
+    public void saveFile(MultipartFile multipartFile, String baseSavePath, String fileName, boolean saveThumbnail) throws IOException, JCodecException {
         File file = new File(baseSavePath+fileName);
         multipartFile.transferTo(file);
 
@@ -38,7 +38,9 @@ public class FileService {
             image = ImageIO.read(file);
         }
 
-        saveThumbnail(image, baseSavePath + "s_" + fileName);
+        if(saveThumbnail) {
+            saveThumbnail(image, baseSavePath + "s_" + fileName);
+        }
     }
 
     public void saveThumbnail(BufferedImage image, String thumbnailPath) throws IOException {

@@ -25,7 +25,7 @@ public class PostSearchResponse {
 
     private Long userId;
 
-    private String userNickname;
+    private String userName;
 
     private List<Long> likeUsers;
 
@@ -70,6 +70,9 @@ public class PostSearchResponse {
     @Schema(description = "파일URL")
     private List<PostSearchFile> files = new ArrayList<>();
 
+    @Schema(description = "썸네일URL", example = "http://localhost/images/post/adjawdalkjdasd.jpg")
+    private String thumbnailUrl;
+
     @Schema(description = "프로필 이미지 URL")
     private String profileUrl;
 
@@ -103,9 +106,6 @@ public class PostSearchResponse {
     public static class PostSearchFile {
         @Schema(description = "파일URL", example = "http://localhost/images/post/adjawdalkjdasd.jpg")
         private String url;
-
-        @Schema(description = "썸네일URL", example = "http://localhost/images/post/adjawdalkjdasd.jpg")
-        private String thumbnailUrl;
 
         @Schema(description = "파일순서", example = "0")
         private Integer seq;

@@ -22,7 +22,7 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Like> likes;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "category_code")
     private CommonCode category;
 
@@ -38,6 +38,8 @@ public class Post {
     private Timestamp regDtm;
 
     private Timestamp updDtm;
+
+    private String thumbnailName;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private List<PostFile> files = new ArrayList<>();
