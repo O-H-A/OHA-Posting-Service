@@ -23,12 +23,12 @@ public class CommentUpdateResponse extends  CommentUpdateRequest {
     private String taggedUserNickname;
     private String profileUrl;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Seoul")
     @JsonDeserialize(using = DateDeserializers.TimestampDeserializer.class)
     @Schema(example = "2024-01-30T15:13:37.875")
     private Timestamp regDtm;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Seoul")
     @JsonDeserialize(using = DateDeserializers.TimestampDeserializer.class)
     @Schema(example = "2024-01-30T15:13:37.875")
     private Timestamp updDtm;

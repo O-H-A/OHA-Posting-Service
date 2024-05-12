@@ -43,12 +43,12 @@ public class CommentSearchResponse {
     @Schema(description = "태그 유저 닉네임", example = "닉네임")
     private String taggedUserNickname;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Seoul")
     @JsonDeserialize(using = DateDeserializers.TimestampDeserializer.class)
     @Schema(example = "2024-01-30T15:13:37.875")
     private Timestamp regDtm;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Seoul")
     @JsonDeserialize(using = DateDeserializers.TimestampDeserializer.class)
     @Schema(example = "2024-01-30T15:13:37.875")
     private Timestamp updDtm;
