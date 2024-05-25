@@ -7,11 +7,13 @@ import com.oha.posting.config.response.ResponseObject;
 import com.oha.posting.dto.external.ExternalLocation;
 import com.oha.posting.dto.external.ExternalUser;
 import com.oha.posting.dto.kafka.PostLikeEvent;
+import com.oha.posting.dto.kafka.PostReportEvent;
 import com.oha.posting.dto.post.*;
 import com.oha.posting.entity.*;
 import com.oha.posting.repository.CommonCodeRepository;
 import com.oha.posting.repository.LikeRepository;
 import com.oha.posting.repository.PostRepository;
+import com.oha.posting.repository.ReportRepository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,6 +43,7 @@ public class PostService {
     private final FileConfig fileConfig;
     private final FileService fileService;
     private final KafkaProducer kafkaProducer;
+    private final ReportRepository reportRepository;
 
     @Value("${file.base-url}")
     private String FILE_BASE_URL;
@@ -390,9 +393,7 @@ public class PostService {
                 throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
             }
 
-            post.setIsDel(true);
-            post.setDelDtm(new Timestamp(System.currentTimeMillis()));
-            rollbackFile(post.getFiles());
+            deletePost(post);
 
             response.setResponse(HttpStatus.OK.value(), "Success");
         }
@@ -470,7 +471,10 @@ public class PostService {
                 }
             }
 
-            Report newReport = new Report(userId, dto.getContent(), post);
+            CommonCode commonCode = commonCodeRepository.findById(dto.getReasonCode())
+                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "잘못된 신고사유입니다."));
+
+            Report newReport = new Report(userId, commonCode, post);
             post.getReports().add(newReport);
             response.setResponse(HttpStatus.CREATED.value(), "Success");
         } catch (InvalidDataException e) {
@@ -479,6 +483,121 @@ public class PostService {
         } catch (Exception e) {
             log.warn("Exception during post report", e);
             throw new Exception("게시물 신고에 실패하였습니다");
+        }
+
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseObject<List<PostReportingSearchResponse>> searchPostReporting(String token, Boolean isDone) throws Exception {
+        ResponseObject<List<PostReportingSearchResponse>> response = new ResponseObject<>();
+
+        try {
+            QReport qReport = QReport.report;
+            BooleanBuilder builder = new BooleanBuilder();
+            if(isDone != null) {
+                builder.and(qReport.isDone.eq(isDone));
+            }
+
+            List<Report> reportList = reportRepository.getReportList(builder);
+            if(reportList.isEmpty()) {
+                throw new InvalidDataException(HttpStatus.NOT_FOUND, "신고 내역이 없습니다.");
+            } else {
+                Set<Long> userIds = new HashSet<>();
+
+                for(Report report: reportList){
+                    userIds.add(report.getUserId());
+                    userIds.add(report.getPost().getUserId());
+                }
+
+                Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
+
+                List<PostReportingSearchResponse> dataList = new ArrayList<>();
+                for(Report report: reportList){
+                    PostReportingSearchResponse dto = PostReportingSearchResponse.toDto(report);
+                    dto.setThumbnailUrl(getThumbnailUrl(report.getPost()));
+                    ExternalUser reportingUser = userMap.get(dto.getReportingUserId());
+                    dto.setReportingUserName(reportingUser.getName());
+
+                    ExternalUser reportedUser = userMap.get(dto.getReportedUserId());
+                    dto.setReportedUserName(reportedUser.getName());
+                    dataList.add(dto);
+                }
+
+                response.setResponse(HttpStatus.OK.value(), "Success", dataList);
+            }
+        } catch (InvalidDataException e) {
+            log.warn("Exception during post reporting search", e);
+            throw e;
+        } catch (Exception e) {
+            log.warn("Exception during post reporting search", e);
+            throw new Exception("게시물 신고 조회에 실패하였습니다");
+        }
+
+        return response;
+    }
+
+    @Transactional(rollbackFor = {Exception.class})
+    public ResponseObject<?> updatePostReportingAction(PostReportIngActionRequest dto) throws Exception {
+        ResponseObject<?> response = new ResponseObject<>();
+
+        try {
+            List<CommonCode> actionCodes = new ArrayList<>();
+            for (String actionCode: dto.getActionCodes()) {
+                CommonCode action = commonCodeRepository.findById(actionCode).orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "잘못된 신고 조치 코드입니다."));
+                actionCodes.add(action);
+            }
+
+            if (dto.getActionCodes().contains("REP_ACT_001")) {
+                if (dto.getActionCodes().contains("REP_ACT_002")) {
+                    throw new InvalidDataException(HttpStatus.BAD_REQUEST, "게시물 삭제/미삭제를 동시에 선택할 수 없습니다.");
+                }
+            }
+            else if (dto.getActionCodes().contains("REP_ACT_003")) {
+                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "게시물을 삭제하는 경우에만 알림 발송이 가능합니다.");
+            }
+
+            Report report = reportRepository.findById(dto.getReportId()).orElseThrow(() ->
+                    new InvalidDataException(HttpStatus.BAD_REQUEST, "신고 정보가 없습니다."));
+
+            if (report.getIsDone()) {
+                throw new InvalidDataException(HttpStatus.CONFLICT, "조치 완료된 신고 건입니다.");
+            }
+
+            Post post = report.getPost();
+            // 게시물 삭제
+            if (dto.getActionCodes().contains("REP_ACT_001")) {
+                deletePost(post);
+            }
+
+            // 알림 발송
+            if (dto.getActionCodes().contains("REP_ACT_003")) {
+                PostReportEvent event = new PostReportEvent(
+                        post.getPostId()
+                        , report.getReportId()
+                        , report.getUserId()
+                        , post.getUserId()
+                        , report.getReason().getCodeName()
+                        , getThumbnailUrl(post)
+                );
+
+                kafkaProducer.sendPostReportEvent(event);
+            }
+
+            report.setIsDone(true);
+            report.setActionDtm(new Timestamp(System.currentTimeMillis()));
+
+            List<ReportAction> actions = actionCodes.stream().map(action -> new ReportAction(report, action)).toList();
+            report.setActions(actions);
+
+            response.setResponse(HttpStatus.OK.value(), "Success");
+
+        } catch (InvalidDataException e) {
+            log.warn("Exception during post reporting action", e);
+            throw e;
+        } catch (Exception e) {
+            log.warn("Exception during post reporting action", e);
+            throw new Exception("게시물 신고 조치에 실패하였습니다.");
         }
 
         return response;
@@ -534,5 +653,11 @@ public class PostService {
         return Optional.ofNullable(post.getThumbnailName())
                 .map(thumbnailName -> FILE_BASE_URL + "/files/post/" + thumbnailName)
                 .orElse(null);
+    }
+
+    public void deletePost(Post post) {
+        post.setIsDel(true);
+        post.setDelDtm(new Timestamp(System.currentTimeMillis()));
+        rollbackFile(post.getFiles());
     }
 }

@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.sql.Timestamp;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,15 +21,27 @@ public class Report {
 
     private Long userId;
 
-    private String content;
+    @ManyToOne
+    private CommonCode reason;
+
+    private Boolean isDone;
+
+    @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ReportAction> actions;
+
+    private Timestamp actionDtm;
+
+    private Timestamp regDtm;
 
     @ManyToOne
     @JoinColumn(name = "post_id")
     private Post post;
 
-    public Report (Long userId, String content, Post post) {
+    public Report (Long userId, CommonCode reason, Post post) {
         this.userId = userId;
-        this.content = content;
+        this.reason = reason;
         this.post = post;
+        this.isDone = false;
+        this.regDtm = new Timestamp(System.currentTimeMillis());
     }
 }

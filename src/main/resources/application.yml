@@ -40,6 +40,10 @@ spring:
   mvc:
     log-resolved-exception: false
 
+  devtools:
+    restart:
+      enabled: false
+
 springdoc:
   swagger-ui:
     path: /api/posting/swagger-ui
