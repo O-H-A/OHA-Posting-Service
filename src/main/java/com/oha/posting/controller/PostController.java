@@ -37,7 +37,7 @@ public class PostController {
                                                         - 500: 서버 오류
                                                         """)
     public ResponseObject<PostSearchResponse> getPost(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
-                                                    , @Parameter(description = "게시물 ID", required = true, example = "1") @PathVariable Long postId) throws Exception {
+                                                    , @Parameter(description = "게시물 ID", example = "1") @PathVariable(value = "postId") Long postId) throws Exception {
         return postService.getPost(token, postId);
     }
 
@@ -126,7 +126,7 @@ public class PostController {
                                                     - 404: 게시물 없음
                                                     - 500: 서버 오류
                                                     """)
-    public ResponseObject<?> deletePost(@Parameter(description = "게시물 ID", required = true, example = "1") @PathVariable Long postId
+    public ResponseObject<?> deletePost(@Parameter(description = "게시물 ID", example = "1") @PathVariable(value = "postId") Long postId
                                       , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
         return postService.deletePost(postId, userId);
     }

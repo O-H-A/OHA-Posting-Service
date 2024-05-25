@@ -88,7 +88,7 @@ public class WeatherController {
                                                      - 500: 서버 오류
                                                      """)
     public ResponseObject<?> deleteWeather(@Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId
-                                         , @PathVariable Long weatherId) throws Exception {
+                                         , @PathVariable(value = "weatherId") Long weatherId) throws Exception {
         return weatherService.deleteWeather(userId, weatherId);
     }
 }
