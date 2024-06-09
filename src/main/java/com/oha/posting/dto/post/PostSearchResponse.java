@@ -27,7 +27,7 @@ public class PostSearchResponse {
 
     private String userName;
 
-    private List<Long> likeUsers;
+    private Boolean isLike;
 
     private Integer likeCount;
 
@@ -76,12 +76,12 @@ public class PostSearchResponse {
     @Schema(description = "프로필 이미지 URL")
     private String profileUrl;
 
-    public static PostSearchResponse toDto(Post post) {
+    public static PostSearchResponse toDto(Post post, Long userId) {
         PostSearchResponse response = new PostSearchResponse();
         response.postId = post.getPostId();
         response.userId = post.getUserId();
-        response.likeUsers = (post.getLikes()).stream().map(Like::getLikeId).map(LikeId::getUserId).toList();
-        response.likeCount = response.getLikeUsers().size();
+        response.isLike = (post.getLikes()).stream().anyMatch(like -> userId.equals(like.getLikeId().getUserId()));
+        response.likeCount = post.getLikes().size();
         response.categoryCode = post.getCategory().getCode();
         response.categoryName = post.getCategory().getCodeName();
         response.keywords = (post.getKeywords()).stream().map(Keyword::getKeywordName).toList();

@@ -52,14 +52,14 @@ public class PostService {
     private String SAVE_PATH;
 
     @Transactional(readOnly = true)
-    public ResponseObject<PostSearchResponse> getPost(String token, Long postId) throws Exception {
+    public ResponseObject<PostSearchResponse> getPost(String token, Long postId, Long userId) throws Exception {
         ResponseObject<PostSearchResponse> response = new ResponseObject<>();
 
         try {
             Post post = postRepository.findByPostIdAndIsDel(postId, false)
                     .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
-            PostSearchResponse data = PostSearchResponse.toDto(post);
+            PostSearchResponse data = PostSearchResponse.toDto(post, userId);
             data.setThumbnailUrl(getThumbnailUrl(post));
             for(PostFile file : post.getFiles()) {
                 data.getFiles().add(new PostSearchResponse.PostSearchFile(
@@ -96,7 +96,7 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<PostSearchResponse>> getPostList(String token, Long regionCode, Boolean popular, String categoryCode, Integer offset, Integer size) throws Exception {
+    public ResponseObject<List<PostSearchResponse>> getPostList(String token, Long regionCode, Boolean popular, String categoryCode, Integer offset, Integer size, Long userId) throws Exception {
         ResponseObject<List<PostSearchResponse>> response = new ResponseObject<>();
         List<PostSearchResponse> dataList = new ArrayList<>();
         try{
@@ -134,7 +134,7 @@ public class PostService {
 
 //              user 리스트 조회
                 Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
-                setPostInfo(dataList, postList, userMap, locationMap);
+                setPostInfo(dataList, postList, userMap, locationMap, userId);
                 if(dataList.isEmpty()) {
                     throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
                 }
@@ -174,7 +174,7 @@ public class PostService {
                 postList.forEach(post -> codes.add(post.getRegionCode()));
                 Map<String, ExternalLocation> locationMap = externalApiService.getLocationMap(token, codes);
 
-                setPostInfo(dataList, postList, userMap, locationMap);
+                setPostInfo(dataList, postList, userMap, locationMap, userId);
                 if(dataList.isEmpty()) {
                     throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
                 }
@@ -194,9 +194,9 @@ public class PostService {
         return response;
     }
 
-    private void setPostInfo(List<PostSearchResponse> dataList, List<Post> postList, Map<Long, ExternalUser> userMap, Map<String, ExternalLocation> locationMap) {
+    private void setPostInfo(List<PostSearchResponse> dataList, List<Post> postList, Map<Long, ExternalUser> userMap, Map<String, ExternalLocation> locationMap, Long userId) {
         for(Post post: postList) {
-            PostSearchResponse data = PostSearchResponse.toDto(post);
+            PostSearchResponse data = PostSearchResponse.toDto(post, userId);
 
             data.setThumbnailUrl(getThumbnailUrl(post));
             for(PostFile file : post.getFiles()) {

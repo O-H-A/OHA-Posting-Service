@@ -37,8 +37,9 @@ public class PostController {
                                                         - 500: 서버 오류
                                                         """)
     public ResponseObject<PostSearchResponse> getPost(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
-                                                    , @Parameter(description = "게시물 ID", example = "1") @PathVariable(value = "postId") Long postId) throws Exception {
-        return postService.getPost(token, postId);
+                                                    , @Parameter(description = "게시물 ID", example = "1") @PathVariable(value = "postId") Long postId
+                                                    , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
+        return postService.getPost(token, postId, userId);
     }
 
     @GetMapping("/posts")
@@ -56,8 +57,9 @@ public class PostController {
                                                               , @RequestParam(name = "popular", required = false) Boolean popular
                                                               , @RequestParam(name = "categoryCode", required = false) String categoryCode
                                                               , @RequestParam(name = "offset", defaultValue = "0") Integer offset
-                                                              , @RequestParam(name = "size", defaultValue = "10") @Max(100) Integer size) throws Exception {
-        return postService.getPostList(token, regionCode, popular, categoryCode, offset, size);
+                                                              , @RequestParam(name = "size", defaultValue = "10") @Max(100) Integer size
+                                                              , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
+        return postService.getPostList(token, regionCode, popular, categoryCode, offset, size, userId);
     }
 
     @GetMapping("/posts/user")
