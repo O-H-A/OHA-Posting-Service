@@ -31,6 +31,8 @@ public class PostSearchResponse {
 
     private Integer likeCount;
 
+    private Long commentCount;
+
     private String categoryCode;
 
     private String categoryName;

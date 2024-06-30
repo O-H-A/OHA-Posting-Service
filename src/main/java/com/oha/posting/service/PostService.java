@@ -10,10 +10,7 @@ import com.oha.posting.dto.kafka.PostLikeEvent;
 import com.oha.posting.dto.kafka.PostReportEvent;
 import com.oha.posting.dto.post.*;
 import com.oha.posting.entity.*;
-import com.oha.posting.repository.CommonCodeRepository;
-import com.oha.posting.repository.LikeRepository;
-import com.oha.posting.repository.PostRepository;
-import com.oha.posting.repository.ReportRepository;
+import com.oha.posting.repository.*;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -44,6 +42,7 @@ public class PostService {
     private final FileService fileService;
     private final KafkaProducer kafkaProducer;
     private final ReportRepository reportRepository;
+    private final CommentRepository commentRepository;
 
     @Value("${file.base-url}")
     private String FILE_BASE_URL;
@@ -80,6 +79,13 @@ public class PostService {
             // 행정구역코드로 위치 조회 API 호출
             ExternalLocation location = externalApiService.getLocation(token, post.getRegionCode());
             data.setLocationInfo(location);
+
+            List<Long> postIds = List.of(post.getPostId());
+            Map<Long, Long> commentCountMap = getCommentCount(postIds);
+
+            // 댓글 개수
+            Long commentCount = commentCountMap.get(post.getPostId());
+            data.setCommentCount(commentCount == null ? 0 : commentCount);
 
             response.setResponse(HttpStatus.OK.value(), "Success", data);
         }
@@ -195,6 +201,9 @@ public class PostService {
     }
 
     private void setPostInfo(List<PostSearchResponse> dataList, List<Post> postList, Map<Long, ExternalUser> userMap, Map<String, ExternalLocation> locationMap, Long userId) {
+        List<Long> postIds = postList.stream().map(Post::getPostId).toList();
+        Map<Long, Long> commentCountMap = getCommentCount(postIds);
+
         for(Post post: postList) {
             PostSearchResponse data = PostSearchResponse.toDto(post, userId);
 
@@ -220,8 +229,12 @@ public class PostService {
             if(location == null) {
                 continue;
             }
-
             data.setLocationInfo(location);
+
+            // 댓글 개수
+            Long commentCount = commentCountMap.get(post.getPostId());
+            data.setCommentCount(commentCount == null ? 0 : commentCount);
+
             dataList.add(data);
         }
     }
@@ -669,5 +682,11 @@ public class PostService {
                 deletePost(post);
             }
         });
+    }
+
+    public Map<Long, Long> getCommentCount(List<Long> postIds) {
+        List<Object[]> countList = commentRepository.findPostCommentCountByIds(postIds);
+
+        return countList.stream().collect(Collectors.toMap(count -> (Long)count[0], count -> (Long)count[1]));
     }
 }

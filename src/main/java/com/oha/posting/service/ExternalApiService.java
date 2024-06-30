@@ -77,7 +77,7 @@ public class ExternalApiService {
     }
 
     // 행정구역 조회
-    @Cacheable(value = "location-single", key="#regionCode")
+    @Cacheable(value = "location-single", key="#regionCode", condition="#regionCode!=null")
     public ExternalLocation getLocation(String token, Long regionCode) {
         try {
             ParameterizedTypeReference<ResponseObject<ExternalLocation>> typeReference = new ParameterizedTypeReference<>(){};
