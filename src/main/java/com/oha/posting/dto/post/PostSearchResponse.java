@@ -76,6 +76,9 @@ public class PostSearchResponse {
     @Schema(description = "프로필 이미지 URL")
     private String profileUrl;
 
+    @Schema(description = "본인 게시물 여부")
+    private Boolean isOwn;
+
     public static PostSearchResponse toDto(Post post, Long userId) {
         PostSearchResponse response = new PostSearchResponse();
         response.postId = post.getPostId();
@@ -90,6 +93,7 @@ public class PostSearchResponse {
         response.regDtm = post.getRegDtm().toLocalDateTime();
         response.updDtm = post.getUpdDtm() == null ? null : post.getUpdDtm().toLocalDateTime();
         response.regionCode = post.getRegionCode();
+        response.isOwn = post.getUserId().equals(userId);
         return response;
     }
 
