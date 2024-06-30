@@ -660,4 +660,14 @@ public class PostService {
         post.setDelDtm(new Timestamp(System.currentTimeMillis()));
         rollbackFile(post.getFiles());
     }
+
+    @Transactional(rollbackFor = {Exception.class})
+    public void deletePostByUserId(Long userId) {
+        List<Post> postList = postRepository.findByUserIdAndIsDel(userId, false);
+        postList.forEach(post -> {
+            if(!post.getIsDel()) {
+                deletePost(post);
+            }
+        });
+    }
 }

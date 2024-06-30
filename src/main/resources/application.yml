@@ -37,6 +37,27 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
+    consumer:
+      bootstrap-servers: ${KAFKA_HOST}:${KAFKA_PORT}
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      group-id: posting-group
+
+      properties:
+        spring:
+          deserializer:
+            value:
+              delegate:
+                class: org.springframework.kafka.support.serializer.JsonDeserializer
+          json:
+            value:
+              default:
+                type: com.oha.posting.dto.kafka.UserWithdrawEvent
+            trusted:
+              packages: com.oha.posting.dto.kafka
+
+
   mvc:
     log-resolved-exception: false
 
