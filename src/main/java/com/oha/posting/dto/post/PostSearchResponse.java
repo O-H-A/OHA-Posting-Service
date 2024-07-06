@@ -81,6 +81,9 @@ public class PostSearchResponse {
     @Schema(description = "본인 게시물 여부")
     private Boolean isOwn;
 
+    @Schema(description = "미디어 타입")
+    private String mediaType;
+
     public static PostSearchResponse toDto(Post post, Long userId) {
         PostSearchResponse response = new PostSearchResponse();
         response.postId = post.getPostId();

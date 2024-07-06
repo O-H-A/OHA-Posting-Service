@@ -59,13 +59,7 @@ public class PostService {
                     .orElseThrow(() -> new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다."));
 
             PostSearchResponse data = PostSearchResponse.toDto(post, userId);
-            data.setThumbnailUrl(getThumbnailUrl(post));
-            for(PostFile file : post.getFiles()) {
-                data.getFiles().add(new PostSearchResponse.PostSearchFile(
-                        getFileUrl(file),
-                        file.getSeq()
-                ));
-            }
+            setFileInfo(data, post);
 
             // db 유저 정보 (user 서비스)
             Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, Set.of(post.getUserId()));
@@ -99,6 +93,17 @@ public class PostService {
         }
 
         return response;
+    }
+
+    private void setFileInfo(PostSearchResponse data, Post post) {
+        data.setThumbnailUrl(getThumbnailUrl(post));
+        data.setMediaType(getMediaType(post.getFiles()));
+        for(PostFile file : post.getFiles()) {
+            data.getFiles().add(new PostSearchResponse.PostSearchFile(
+                    getFileUrl(file),
+                    file.getSeq()
+            ));
+        }
     }
 
     @Transactional(readOnly = true)
@@ -206,14 +211,7 @@ public class PostService {
 
         for(Post post: postList) {
             PostSearchResponse data = PostSearchResponse.toDto(post, userId);
-
-            data.setThumbnailUrl(getThumbnailUrl(post));
-            for(PostFile file : post.getFiles()) {
-                data.getFiles().add(new PostSearchResponse.PostSearchFile(
-                        getFileUrl(file),
-                        file.getSeq()
-                ));
-            }
+            setFileInfo(data, post);
 
             // user 정보 매핑
             ExternalUser user = userMap.get(post.getUserId());
