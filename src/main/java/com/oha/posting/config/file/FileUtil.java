@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 
 public class FileUtil {
     public static void deleteFile(String filePath) throws IOException {
@@ -19,11 +20,11 @@ public class FileUtil {
     }
 
     public static boolean isVideo(MultipartFile multipartFile) {
-        return List.of("mp4", "mov").contains(getFileExtension(multipartFile.getOriginalFilename()));
+        return List.of("mp4", "mov", "m4r").contains(getFileExtension(Objects.requireNonNull(multipartFile.getOriginalFilename())));
     }
 
     public static boolean isVideo(String fileName) {
-        return List.of("mp4", "mov").contains(getFileExtension(fileName));
+        return List.of("mp4", "mov", "m4r").contains(getFileExtension(fileName));
     }
 
     public static String getFileNameWithoutExtension(String fileName) {

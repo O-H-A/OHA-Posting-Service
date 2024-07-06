@@ -9,8 +9,8 @@ import java.util.List;
 public class FileConfig {
 
     private final List<String> ALLOWED_EXTENSIONS = List.of(
-            "jpg", "jpeg", "png", "gif", "heic", "heif" // IMAGE
-            , "mp4", "mov" // VIDEO
+            "jpg", "jpeg", "png", "gif", "heic", "heif", "tiff" // IMAGE
+            , "mp4", "mov", "m4r" // VIDEO
     );
 
     public boolean isAllowedFile(MultipartFile file) {
