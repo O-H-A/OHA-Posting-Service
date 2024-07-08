@@ -15,9 +15,9 @@ public class CommentInsertResponse extends  CommentInsertRequest {
 
     private Long commentId;
     private Long userId;
-    private String userNickname;
-    private Long taggedUserId;
-    private String taggedUserNickname;
+    private String userName;
+    private Long replyUserId;
+    private String replyUserName;
     private String profileUrl;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Seoul")
@@ -29,8 +29,8 @@ public class CommentInsertResponse extends  CommentInsertRequest {
         CommentInsertResponse response = new CommentInsertResponse();
         response.setPostId(request.getPostId());
         response.setParentId(request.getParentId());
+        response.setReplyId(request.getReplyId());
         response.setContent(request.getContent());
-        response.setTaggedUserId(request.getTaggedUserId());
         return response;
     }
 }

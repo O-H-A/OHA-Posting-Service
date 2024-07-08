@@ -32,16 +32,16 @@ public class CommentSearchResponse {
     private Long userId;
 
     @Schema(description = "사용자 닉네임", example = "다람쥐")
-    private String userNickname;
+    private String userName;
 
     @Schema(description = "사용자 프로필", example = "http://112.213.123.123/files/user/1231451515.jpg")
     private String profileUrl;
 
     @Schema(description = "태그 유저 ID", example = "17")
-    private Long taggedUserId;
+    private Long replyUserId;
 
     @Schema(description = "태그 유저 닉네임", example = "닉네임")
-    private String taggedUserNickname;
+    private String replyUserName;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "Asia/Seoul")
     @JsonDeserialize(using = DateDeserializers.TimestampDeserializer.class)
@@ -56,21 +56,25 @@ public class CommentSearchResponse {
     @Schema(description = "대댓글 개수", example = "10")
     private Long replyCount;
 
-    @Schema(description = "좋아요 사용자", example = "[1,2,3]")
-    private List<Long> likeUsers;
+    @Schema(description = "좋아요 여부", example = "true")
+    private Boolean isLike;
 
     @Schema(description = "좋아요 수", example = "10")
     private Integer likeCount;
 
-    public CommentSearchResponse(Long commentId, Long parentId, Long postId, String content, Long userId, Long taggedUserId, Timestamp regDtm, Timestamp updDtm, Long replyCount) {
+    @Schema(description = "댓글 유형", example = "C")
+    private String type;
+
+    public CommentSearchResponse(Long commentId, Long parentId, Long postId, String content, Long userId, Long replyUserId, Timestamp regDtm, Timestamp updDtm, Long replyCount, String type) {
         this.commentId = commentId;
         this.parentId = parentId;
         this.postId = postId;
         this.content = content;
         this.userId = userId;
-        this.taggedUserId = taggedUserId;
+        this.replyUserId = replyUserId;
         this.regDtm = regDtm;
         this.updDtm = updDtm;
         this.replyCount = replyCount;
+        this.type = type;
     }
 }

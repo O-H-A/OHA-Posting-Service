@@ -25,8 +25,6 @@ public class Comment {
 
     private Long userId;
 
-    private Long taggedUserId;
-
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CommentLike> likes = new ArrayList<>();
 
@@ -34,10 +32,14 @@ public class Comment {
     @JoinColumn(name = "parent_id")
     private Comment parent;
 
+    @ManyToOne
+    @JoinColumn(name = "reply_id")
+    private Comment reply;
+
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Comment> child = new ArrayList<>();
 
-    private Boolean isParent;
+    private String type;
 
     private Boolean isDel;
 

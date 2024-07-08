@@ -27,6 +27,7 @@ public class CommentRepositoryImpl implements CommentRepositoryCustom {
     @Override
     public List<CommentSearchResponse> searchCommentList(BooleanBuilder builder, List<OrderSpecifier<?>> orderSpecifiers, int offset, int size) {
         QComment childComment = new QComment("childComment");
+        QComment replyComment = new QComment("replyComment");
         return queryFactory
                 .select(Projections.constructor(CommentSearchResponse.class
                         , comment.commentId
@@ -34,17 +35,25 @@ public class CommentRepositoryImpl implements CommentRepositoryCustom {
                         , comment.post.postId
                         , comment.content
                         , comment.userId
-                        , comment.taggedUserId
+                        , replyComment.userId
                         , comment.regDtm
                         , comment.updDtm
                         , childComment.count()
+                        , comment.type
                 ))
                 .from(comment)
                 .innerJoin(post)
                 .on(comment.post.postId.eq(post.postId).and(post.isDel.eq(false)))
                 .leftJoin(comment.child, childComment)
+                .leftJoin(comment.reply, replyComment)
                 .where(builder)
-                .groupBy(comment.commentId, comment.post.postId, comment.content, comment.userId, comment.taggedUserId, comment.regDtm)
+                .groupBy(comment.commentId
+                        , comment.post.postId
+                        , comment.content
+                        , comment.userId
+                        , replyComment.userId
+                        , comment.regDtm
+                        , comment.type)
                 .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
                 .offset(offset)
                 .limit(size)

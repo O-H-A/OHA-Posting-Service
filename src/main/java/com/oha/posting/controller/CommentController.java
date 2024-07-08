@@ -36,8 +36,9 @@ public class CommentController {
             , @RequestParam(name = "postId", required = false) Long postId
             , @RequestParam(name = "parentId", required = false) Long parentId
             , @RequestParam(name = "offset", defaultValue = "0") Integer offset
-            , @RequestParam(name = "size", defaultValue = "10") @Max(100) Integer size) throws Exception {
-        return commentService.getCommentList(token, postId, parentId, offset, size);
+            , @RequestParam(name = "size", defaultValue = "10") @Max(100) Integer size
+            , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
+        return commentService.getCommentList(token, postId, parentId, offset, size, userId);
     }
 
 

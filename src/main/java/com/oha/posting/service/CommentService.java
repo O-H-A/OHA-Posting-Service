@@ -36,7 +36,7 @@ public class CommentService {
 
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<CommentSearchResponse>> getCommentList(String token, Long postId, Long parentId, Integer offset, Integer size) throws Exception {
+    public ResponseObject<List<CommentSearchResponse>> getCommentList(String token, Long postId, Long parentId, Integer offset, Integer size, Long userId) throws Exception {
         if((postId == null) == (parentId == null)) {
             throw new InvalidDataException(HttpStatus.BAD_REQUEST, "postId, parentId 둘 중 하나만 입력해주세요");
         }
@@ -49,11 +49,11 @@ public class CommentService {
             builder.and(qComment.isDel.eq(false));
             if(parentId != null) {
                 builder.and(qComment.parent.commentId.eq(parentId));
-                builder.and(qComment.isParent.eq(false));
+                builder.and(qComment.type.ne("C"));
             }
             else {
                 builder.and(qComment.post.postId.eq(postId));
-                builder.and(qComment.isParent.eq(true));
+                builder.and(qComment.type.eq("C"));
             }
 
             List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
@@ -70,9 +70,10 @@ public class CommentService {
                 for (CommentSearchResponse comment : commentList) {
                     List<Long> commentLikes = likeUsers.get(comment.getCommentId());
                     if (commentLikes != null) {
-                        comment.setLikeUsers(commentLikes);
+                        comment.setIsLike(commentLikes.stream().anyMatch(likeUserId -> likeUserId.equals(userId)));
                         comment.setLikeCount(commentLikes.size());
                     } else {
+                        comment.setIsLike(false);
                         comment.setLikeCount(0);
                     }
                 }
@@ -80,8 +81,8 @@ public class CommentService {
                 Set<Long> userIds = new HashSet<>();
                 for(CommentSearchResponse c : commentList) {
                     userIds.add(c.getUserId());
-                    if(c.getTaggedUserId() != null) {
-                        userIds.add(c.getTaggedUserId());
+                    if(c.getReplyUserId() != null) {
+                        userIds.add(c.getReplyUserId());
                     }
                 }
 
@@ -98,14 +99,14 @@ public class CommentService {
                         continue;
                     }
 
-                    c.setUserNickname(user.getName());
+                    c.setUserName(user.getName());
                     c.setProfileUrl(user.getProfileUrl());
 
                     // tagged user 정보
-                    if(c.getTaggedUserId() != null) {
-                        ExternalUser taggedUser = userMap.get(c.getTaggedUserId());
-                        if(taggedUser != null) {
-                            c.setTaggedUserNickname(taggedUser.getName());
+                    if(c.getReplyUserId() != null) {
+                        ExternalUser replyUser = userMap.get(c.getReplyUserId());
+                        if(replyUser != null) {
+                            c.setReplyUserName(replyUser.getName());
                         }
                     }
                 }
@@ -134,16 +135,71 @@ public class CommentService {
         Comment comment = Comment.toEntity(dto);
         comment.setUserId(userId);
 
+        int typeCnt = 0;
+        if (dto.getPostId() != null) typeCnt++;
+        if (dto.getParentId() != null) typeCnt++;
+        if (dto.getReplyId() != null) typeCnt++;
+        if (typeCnt != 1) {
+            throw new InvalidDataException(HttpStatus.BAD_REQUEST, "postId, parentId, replyId 중 하나만 입력해주세요");
+        }
+
         try {
-            // 게시물 확인
-            Post post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
-                    .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "게시물이 없습니다."));
-            comment.setPost(post);
+            Post post;
+            Comment reply = null;
+
+            // 댓글 (Comment)
+            if(dto.getParentId() == null && dto.getReplyId() == null) {
+                // 게시물 확인
+                post = postRepository.findByPostIdAndIsDel(dto.getPostId(), false)
+                        .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "게시물이 없습니다."));
+                comment.setPost(post);
+                comment.setType("C");
+            }
+
+            else {
+                Comment parentComment;
+                // 답글 (Reply)
+                if (dto.getParentId() != null) {
+                    // 부모 댓글 확인
+                    parentComment = commentRepository.findByCommentIdAndIsDelAndType(dto.getParentId(), false, "C")
+                            .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다."));
+
+                    post = parentComment.getPost();
+                    if (post == null || post.getIsDel()) {
+                        throw new InvalidDataException(HttpStatus.BAD_REQUEST, "게시물이 없습니다.");
+                    }
+
+                    comment.setType("R");
+                }
+
+                // 답글의 댓글 (CommentInReply)
+                else {
+                    // 답글 확인
+                    reply = commentRepository.findByCommentIdAndIsDelAndTypeIn(dto.getReplyId(), false, List.of("R", "RC"))
+                            .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "답글이 없습니다."));
+
+                    parentComment = reply.getParent();
+                    if (reply.getParent() == null || reply.getParent().getIsDel()) {
+                        throw new InvalidDataException(HttpStatus.BAD_REQUEST, "댓글이 없습니다.");
+                    }
+
+                    post = reply.getParent().getPost();
+                    if (reply.getParent().getPost() == null || reply.getParent().getPost().getIsDel()) {
+                        throw new InvalidDataException(HttpStatus.BAD_REQUEST, "게시물이 없습니다.");
+                    }
+
+                    comment.setType("RC");
+                    comment.setReply(reply);
+                }
+
+                comment.setPost(post);
+                comment.setParent(parentComment);
+            }
 
             Set<Long> userIds = new HashSet<>();
             userIds.add(userId);
-            if(dto.getTaggedUserId() != null) {
-                userIds.add(dto.getTaggedUserId());
+            if(reply != null) {
+                userIds.add(reply.getUserId());
             }
 
             // 유저 확인
@@ -154,26 +210,13 @@ public class CommentService {
 
             ExternalUser user = userMap.get(userId);
             data.setUserId(user.getUserId());
-            data.setUserNickname(user.getName());
+            data.setUserName(user.getName());
             data.setProfileUrl(user.getProfileUrl());
 
-            if(dto.getTaggedUserId() != null) {
-                ExternalUser taggedUser = userMap.get(dto.getTaggedUserId());
-                comment.setTaggedUserId(taggedUser.getUserId());
-                data.setTaggedUserId(taggedUser.getUserId());
-                data.setTaggedUserNickname(taggedUser.getName());
-            }
-
-            if(dto.getParentId() != null) {
-                // 부모 댓글 확인
-                Comment parentComment = commentRepository.findByCommentIdAndIsDelAndIsParent(dto.getParentId(), false, true)
-                        .orElseThrow(() -> new InvalidDataException(HttpStatus.BAD_REQUEST, "부모 댓글이 없습니다."));
-
-                comment.setParent(parentComment);
-                comment.setIsParent(false);
-            }
-            else {
-                comment.setIsParent(true);
+            if(reply != null) {
+                ExternalUser replyUser = userMap.get(reply.getUserId());
+                data.setReplyUserId(replyUser.getUserId());
+                data.setReplyUserName(replyUser.getName());
             }
 
             Comment savedComment = commentRepository.save(comment);
@@ -221,34 +264,10 @@ public class CommentService {
                 throw new InvalidDataException(HttpStatus.FORBIDDEN, "권한이 없습니다.");
             }
 
-
-            comment.setTaggedUserId(dto.getTaggedUserId());
             comment.setContent(dto.getContent());
             comment.setUpdDtm(new Timestamp(System.currentTimeMillis()));
 
             CommentUpdateResponse data = CommentUpdateResponse.toResponse(comment);
-
-            Set<Long> userIds = new HashSet<>();
-            userIds.add(userId);
-            if(dto.getTaggedUserId() != null) {
-                userIds.add(dto.getTaggedUserId());
-            }
-
-            Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
-            if (userMap.size() != userIds.size()) {
-                throw new InvalidDataException(HttpStatus.BAD_REQUEST, "사용자 정보를 찾을 수 없습니다.");
-            }
-
-            ExternalUser user = userMap.get(userId);
-            data.setUserNickname(user.getName());
-            data.setProfileUrl(user.getProfileUrl());
-
-            if(dto.getTaggedUserId() != null) {
-                ExternalUser taggedUser = userMap.get(dto.getTaggedUserId());
-                data.setTaggedUserId(taggedUser.getUserId());
-                data.setTaggedUserNickname(taggedUser.getName());
-            }
-
             response.setResponse(HttpStatus.OK.value(), "Success", data);
 
         } catch (InvalidDataException e) {

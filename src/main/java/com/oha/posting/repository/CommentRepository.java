@@ -10,7 +10,8 @@ import java.util.Optional;
 
 public interface CommentRepository extends JpaRepository<Comment, Long>, CommentRepositoryCustom {
 
-    Optional<Comment> findByCommentIdAndIsDelAndIsParent(Long commentId, Boolean isDel, Boolean isParent);
+    Optional<Comment> findByCommentIdAndIsDelAndType(Long commentId, Boolean isDel, String type);
+    Optional<Comment> findByCommentIdAndIsDelAndTypeIn(Long commentId, Boolean isDel, List<String> type);
 
     Optional<Comment> findByCommentIdAndIsDel(Long commentId, boolean b);
 

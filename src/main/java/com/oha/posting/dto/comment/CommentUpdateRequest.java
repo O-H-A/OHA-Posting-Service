@@ -18,7 +18,4 @@ public class CommentUpdateRequest {
     @NotBlank
     private String content;
 
-    @Schema(description = "태그 유저 ID", example = "17")
-    private Long taggedUserId;
-
 }
