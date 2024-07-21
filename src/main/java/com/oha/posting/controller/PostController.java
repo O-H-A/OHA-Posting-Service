@@ -62,7 +62,7 @@ public class PostController {
         return postService.getPostList(token, regionCode, popular, categoryCode, offset, size, userId);
     }
 
-    @GetMapping("/posts/user")
+    @GetMapping(value = {"/posts/user/{userId}", "/posts/user"})
     @Operation(summary = "사용자 게시물 전체 조회", description = """
                                                           **statusCode:**
                                                           - 200: 성공
@@ -71,8 +71,10 @@ public class PostController {
                                                           - 500: 서버 오류
                                                           """)
     public ResponseObject<List<PostSearchResponse>> getPostsByUser(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
-                                                                  , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long userId) throws Exception {
-        return postService.getPostsByUser(token, userId);
+                                                                  , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long xUserId
+                                                                  , @PathVariable(value = "userId", required = false) Long userId) throws Exception {
+        Long targetUserId = (userId != null) ? userId : xUserId;
+        return postService.getPostsByUser(token, targetUserId);
     }
 
     @PostMapping("/posts/batch-search")
