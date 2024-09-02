@@ -73,8 +73,7 @@ public class PostController {
     public ResponseObject<List<PostSearchResponse>> getPostsByUser(@Parameter(hidden = true) @RequestHeader(name = "Authorization") String token
                                                                   , @Parameter(hidden = true) @RequestHeader(name = "x-user-id") Long xUserId
                                                                   , @PathVariable(value = "userId", required = false) Long userId) throws Exception {
-        Long targetUserId = (userId != null) ? userId : xUserId;
-        return postService.getPostsByUser(token, targetUserId);
+        return postService.getPostsByUser(token, userId, xUserId);
     }
 
     @PostMapping("/posts/batch-search")

@@ -166,17 +166,18 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public ResponseObject<List<PostSearchResponse>> getPostsByUser(String token, Long userId) throws Exception {
+    public ResponseObject<List<PostSearchResponse>> getPostsByUser(String token, Long userId, Long xUserId) throws Exception {
         ResponseObject<List<PostSearchResponse>> response = new ResponseObject<>();
         List<PostSearchResponse> dataList = new ArrayList<>();
         try{
-            List<Post> postList = postRepository.searchPostList(userId);
+            Long targetUserId = (userId != null) ? userId : xUserId;
+            List<Post> postList = postRepository.searchPostList(targetUserId);
 
             if(postList.isEmpty()) {
                 throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
             }
             else {
-                Set<Long> userIds = Set.of(userId);
+                Set<Long> userIds = Set.of(targetUserId);
 
 //              user 리스트 조회
                 Map<Long, ExternalUser> userMap = externalApiService.getUserMap(token, userIds);
@@ -185,7 +186,7 @@ public class PostService {
                 postList.forEach(post -> codes.add(post.getRegionCode()));
                 Map<String, ExternalLocation> locationMap = externalApiService.getLocationMap(token, codes);
 
-                setPostInfo(dataList, postList, userMap, locationMap, userId);
+                setPostInfo(dataList, postList, userMap, locationMap, xUserId);
                 if(dataList.isEmpty()) {
                     throw new InvalidDataException(HttpStatus.NOT_FOUND, "게시물이 없습니다.");
                 }

@@ -38,6 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseObject<?> handleException(Exception e, HttpServletResponse httpServletResponse) {
+        log.warn("Internal Server Error", e);
         httpServletResponse.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
         return new ResponseObject<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
     }
